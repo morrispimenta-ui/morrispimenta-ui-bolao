@@ -1,0 +1,814 @@
+[
+  {
+    "entry_id": 3,
+    "name": "Samuel Soares Filho",
+    "bet_number": 1,
+    "display_name": "Samuel Soares Filho #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Argentina",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 4,
+    "name": "LAURA BORGES MENDES",
+    "bet_number": 2,
+    "display_name": "LAURA BORGES MENDES #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Espanha",
+      "terceiro": "França",
+      "quarto": "Uruguai",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 5,
+    "name": "celio chieco",
+    "bet_number": 1,
+    "display_name": "celio chieco #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Argentina",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 6,
+    "name": "Vinicius Chieco",
+    "bet_number": 1,
+    "display_name": "Vinicius Chieco #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Brasil",
+      "terceiro": "França",
+      "quarto": "Argentina",
+      "artilheiro": "Ferran Torres"
+    }
+  },
+  {
+    "entry_id": 7,
+    "name": "Nadiara",
+    "bet_number": 2,
+    "display_name": "Nadiara #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Argentina",
+      "terceiro": "Inglaterra",
+      "quarto": "Espanha",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 8,
+    "name": "ronaldo",
+    "bet_number": 1,
+    "display_name": "ronaldo #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Brasil",
+      "terceiro": "Portugal",
+      "quarto": "França",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 9,
+    "name": "advocaciasheiladaniel",
+    "bet_number": 1,
+    "display_name": "advocaciasheiladaniel #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Holanda",
+      "vice": "México",
+      "terceiro": "Espanha",
+      "quarto": "Portugal",
+      "artilheiro": "Lionel Messi"
+    }
+  },
+  {
+    "entry_id": 10,
+    "name": "Pedro Porco Louco",
+    "bet_number": 1,
+    "display_name": "Pedro Porco Louco #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Argentina",
+      "vice": "Inglaterra",
+      "terceiro": "França",
+      "quarto": "Brasil",
+      "artilheiro": "Julián Álvarez"
+    }
+  },
+  {
+    "entry_id": 11,
+    "name": "Fernando (Arcon)",
+    "bet_number": 2,
+    "display_name": "Fernando (Arcon) #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 12,
+    "name": "Morris Pimenta e Souza",
+    "bet_number": 2,
+    "display_name": "Morris Pimenta e Souza #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Argentina",
+      "quarto": "Marrocos",
+      "artilheiro": "Erling Haaland"
+    }
+  },
+  {
+    "entry_id": 13,
+    "name": "Participante 013",
+    "bet_number": 1,
+    "display_name": "Participante 013 #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Brasil",
+      "terceiro": "Espanha",
+      "quarto": "Argentina",
+      "artilheiro": "Vini Jr."
+    }
+  },
+  {
+    "entry_id": 14,
+    "name": "Odilon Mangerona",
+    "bet_number": 2,
+    "display_name": "Odilon Mangerona #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Espanha",
+      "terceiro": "França",
+      "quarto": "Argentina",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 15,
+    "name": "Nadiara",
+    "bet_number": 1,
+    "display_name": "Nadiara #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Inglaterra",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Colômbia",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 16,
+    "name": "Renato Aquino",
+    "bet_number": 1,
+    "display_name": "Renato Aquino #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Bélgica",
+      "terceiro": "Alemanha",
+      "quarto": "Portugal",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 17,
+    "name": "Deise Souza",
+    "bet_number": 1,
+    "display_name": "Deise Souza #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Argentina",
+      "quarto": "Portugal",
+      "artilheiro": "Vini Jr."
+    }
+  },
+  {
+    "entry_id": 18,
+    "name": "Morris Pimenta e Souza",
+    "bet_number": 1,
+    "display_name": "Morris Pimenta e Souza #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Argentina",
+      "terceiro": "França",
+      "quarto": "Brasil",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 19,
+    "name": "Maria Clara",
+    "bet_number": 2,
+    "display_name": "Maria Clara #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Michael Olise"
+    }
+  },
+  {
+    "entry_id": 20,
+    "name": "Alexandre Mendes",
+    "bet_number": 2,
+    "display_name": "Alexandre Mendes #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "Espanha",
+      "terceiro": "Brasil",
+      "quarto": "França",
+      "artilheiro": "Lautaro Martínez"
+    }
+  },
+  {
+    "entry_id": 21,
+    "name": "Maria Clara",
+    "bet_number": 1,
+    "display_name": "Maria Clara #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Portugal",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 22,
+    "name": "Camila Tokunaga",
+    "bet_number": 2,
+    "display_name": "Camila Tokunaga #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "França",
+      "terceiro": "Brasil",
+      "quarto": "Inglaterra",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 23,
+    "name": "Pedro Mazieri Rezende",
+    "bet_number": 1,
+    "display_name": "Pedro Mazieri Rezende #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Inglaterra",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 24,
+    "name": "arthur.mazieri.rezende.2202",
+    "bet_number": 1,
+    "display_name": "arthur.mazieri.rezende.2202 #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Argentina",
+      "terceiro": "Inglaterra",
+      "quarto": "Espanha",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 25,
+    "name": "rcostapinto.75",
+    "bet_number": 1,
+    "display_name": "rcostapinto.75 #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Portugal",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 26,
+    "name": "drsandrocunha",
+    "bet_number": 1,
+    "display_name": "drsandrocunha #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "França",
+      "terceiro": "Brasil",
+      "quarto": "Espanha",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 27,
+    "name": "Bia Andreoli",
+    "bet_number": 2,
+    "display_name": "Bia Andreoli #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Espanha",
+      "terceiro": "Argentina",
+      "quarto": "Alemanha",
+      "artilheiro": "Vini Jr."
+    }
+  },
+  {
+    "entry_id": 28,
+    "name": "Denis Pimenta",
+    "bet_number": 2,
+    "display_name": "Denis Pimenta #2",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Argentina",
+      "terceiro": "Espanha",
+      "quarto": "Marrocos",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 29,
+    "name": "Denis Pimenta",
+    "bet_number": 1,
+    "display_name": "Denis Pimenta #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "Espanha",
+      "terceiro": "França",
+      "quarto": "Inglaterra",
+      "artilheiro": "Cristiano Ronaldo"
+    }
+  },
+  {
+    "entry_id": 30,
+    "name": "antonio.felizes",
+    "bet_number": 1,
+    "display_name": "antonio.felizes #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Argentina",
+      "terceiro": "Espanha",
+      "quarto": "Marrocos",
+      "artilheiro": "Vini Jr."
+    }
+  },
+  {
+    "entry_id": 31,
+    "name": "Renato Nagahama",
+    "bet_number": 2,
+    "display_name": "Renato Nagahama #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Espanha",
+      "terceiro": "Portugal",
+      "quarto": "França",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 32,
+    "name": "Renato Nagahama",
+    "bet_number": 1,
+    "display_name": "Renato Nagahama #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "Espanha",
+      "terceiro": "Brasil",
+      "quarto": "França",
+      "artilheiro": "Harry Kane"
+    }
+  },
+  {
+    "entry_id": 33,
+    "name": "Mauricio Naga",
+    "bet_number": 1,
+    "display_name": "Mauricio Naga #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Argentina",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 34,
+    "name": "Rita",
+    "bet_number": 1,
+    "display_name": "Rita #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Espanha",
+      "terceiro": "Portugal",
+      "quarto": "França",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 35,
+    "name": "Ronei S",
+    "bet_number": 1,
+    "display_name": "Ronei S #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Argentina",
+      "terceiro": "França",
+      "quarto": "Inglaterra",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 36,
+    "name": "Carlos Mendes",
+    "bet_number": 2,
+    "display_name": "Carlos Mendes #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Portugal",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 37,
+    "name": "Carlos Mendes",
+    "bet_number": 1,
+    "display_name": "Carlos Mendes #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Brasil",
+      "terceiro": "França",
+      "quarto": "Portugal",
+      "artilheiro": "Nico Williams"
+    }
+  },
+  {
+    "entry_id": 39,
+    "name": "carlos guedes",
+    "bet_number": 1,
+    "display_name": "carlos guedes #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "Argentina",
+      "terceiro": "Espanha",
+      "quarto": "Japão",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 40,
+    "name": "José Eduardo Cruz",
+    "bet_number": 1,
+    "display_name": "José Eduardo Cruz #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Inglaterra",
+      "terceiro": "Espanha",
+      "quarto": "Argentina",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 41,
+    "name": "Felipe Ruano Cruz",
+    "bet_number": 1,
+    "display_name": "Felipe Ruano Cruz #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Inglaterra",
+      "terceiro": "Portugal",
+      "quarto": "Espanha",
+      "artilheiro": "Harry Kane"
+    }
+  },
+  {
+    "entry_id": 42,
+    "name": "LAURA BORGES MENDES",
+    "bet_number": 1,
+    "display_name": "LAURA BORGES MENDES #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Argentina",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Michael Olise"
+    }
+  },
+  {
+    "entry_id": 43,
+    "name": "Rilton Guiso",
+    "bet_number": 2,
+    "display_name": "Rilton Guiso #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Estados Unidos",
+      "artilheiro": "Vini Jr."
+    }
+  },
+  {
+    "entry_id": 44,
+    "name": "Rilton Guiso",
+    "bet_number": 1,
+    "display_name": "Rilton Guiso #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Portugal",
+      "terceiro": "Brasil",
+      "quarto": "Alemanha",
+      "artilheiro": "Igor Thiago"
+    }
+  },
+  {
+    "entry_id": 45,
+    "name": "Fabio Battistini",
+    "bet_number": 1,
+    "display_name": "Fabio Battistini #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "México",
+      "artilheiro": "Michael Olise"
+    }
+  },
+  {
+    "entry_id": 46,
+    "name": "Willian Milane",
+    "bet_number": 1,
+    "display_name": "Willian Milane #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Brasil",
+      "terceiro": "Argentina",
+      "quarto": "França",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 47,
+    "name": "Fernando (Arcon)",
+    "bet_number": 1,
+    "display_name": "Fernando (Arcon) #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Inglaterra",
+      "vice": "Espanha",
+      "terceiro": "Portugal",
+      "quarto": "Noruega",
+      "artilheiro": "Ousmane Dembélé"
+    }
+  },
+  {
+    "entry_id": 48,
+    "name": "Zezinho",
+    "bet_number": 2,
+    "display_name": "Zezinho #2",
+    "valid": true,
+    "finals": {
+      "campeao": "Alemanha",
+      "vice": "Inglaterra",
+      "terceiro": "Espanha",
+      "quarto": "Uruguai",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 49,
+    "name": "Matheus Carvalho",
+    "bet_number": 1,
+    "display_name": "Matheus Carvalho #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Portugal",
+      "terceiro": "Brasil",
+      "quarto": "Noruega",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 50,
+    "name": "Alexandre Franco Paiva",
+    "bet_number": 1,
+    "display_name": "Alexandre Franco Paiva #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Argentina",
+      "quarto": "Espanha",
+      "artilheiro": "Endrick"
+    }
+  },
+  {
+    "entry_id": 51,
+    "name": "Rodrigo Rezende",
+    "bet_number": 1,
+    "display_name": "Rodrigo Rezende #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Portugal",
+      "terceiro": "Espanha",
+      "quarto": "Inglaterra",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 52,
+    "name": "FMatrella",
+    "bet_number": 1,
+    "display_name": "FMatrella #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Portugal",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Michael Olise"
+    }
+  },
+  {
+    "entry_id": 53,
+    "name": "Bia Andreoli",
+    "bet_number": 1,
+    "display_name": "Bia Andreoli #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Argentina",
+      "terceiro": "França",
+      "quarto": "Brasil",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 54,
+    "name": "Alexandre Mendes",
+    "bet_number": 1,
+    "display_name": "Alexandre Mendes #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Portugal",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Michael Olise"
+    }
+  },
+  {
+    "entry_id": 55,
+    "name": "achazan2014",
+    "bet_number": 1,
+    "display_name": "achazan2014 #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Brasil",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Portugal",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 56,
+    "name": "Humberto Alonso",
+    "bet_number": 1,
+    "display_name": "Humberto Alonso #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Brasil",
+      "terceiro": "Portugal",
+      "quarto": "França",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 57,
+    "name": "Saulo Momesso",
+    "bet_number": 1,
+    "display_name": "Saulo Momesso #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Portugal",
+      "vice": "França",
+      "terceiro": "Espanha",
+      "quarto": "Brasil",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 58,
+    "name": "Odilon Mangerona",
+    "bet_number": 1,
+    "display_name": "Odilon Mangerona #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Argentina",
+      "terceiro": "França",
+      "quarto": "Brasil",
+      "artilheiro": "Lamine Yamal"
+    }
+  },
+  {
+    "entry_id": 59,
+    "name": "Ricardo Mendes",
+    "bet_number": 1,
+    "display_name": "Ricardo Mendes #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Portugal",
+      "terceiro": "Espanha",
+      "quarto": "Inglaterra",
+      "artilheiro": "Mikel Oyarzabal"
+    }
+  },
+  {
+    "entry_id": 60,
+    "name": "Fabio Alexandre",
+    "bet_number": 1,
+    "display_name": "Fabio Alexandre #1",
+    "valid": true,
+    "finals": {
+      "campeao": "França",
+      "vice": "Portugal",
+      "terceiro": "Espanha",
+      "quarto": "Inglaterra",
+      "artilheiro": "Kylian Mbappé"
+    }
+  },
+  {
+    "entry_id": 61,
+    "name": "Eric Tokunaga",
+    "bet_number": 1,
+    "display_name": "Eric Tokunaga #1",
+    "valid": true,
+    "finals": {
+      "campeao": "Espanha",
+      "vice": "Inglaterra",
+      "terceiro": "França",
+      "quarto": "Argentina",
+      "artilheiro": "Harry Kane"
+    }
+  }
+]
