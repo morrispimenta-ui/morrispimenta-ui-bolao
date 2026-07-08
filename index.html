@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bolão Copa 2026 · Valencia / Legion / PPK</title>
-  <meta name="description" content="Ranking, palpites, estatísticas e regras do Bolão Copa 2026 Valencia / Legion / PPK." />
+  <meta name="description" content="Conferência pública, transparente e automática do Bolão Copa 2026." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -21,13 +21,12 @@
         </div>
       </div>
       <nav class="menu" id="mainMenu">
-        <button class="active" data-page="home">🏠 <span>Home</span></button>
+        <button class="active" data-page="home">🏠 <span>Início</span></button>
         <button data-page="ranking">🏅 <span>Ranking</span></button>
         <button data-page="palpites">📝 <span>Palpites</span></button>
-        <button data-page="jogos">⚽ <span>Jogos</span></button>
+        <button data-page="resultados">⚽ <span>Resultados</span></button>
         <button data-page="estatisticas">📊 <span>Estatísticas</span></button>
-        <button data-page="comparar">⚖️ <span>Comparar</span></button>
-        <button data-page="simulador">🔮 <span>Simulador</span></button>
+        <button data-page="conferencia">🔎 <span>Conferência</span></button>
         <button data-page="regras">📜 <span>Regras</span></button>
       </nav>
       <div class="side-note">
@@ -40,7 +39,7 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Bolão Copa do Mundo 2026</p>
-          <h1 id="pageTitle">Home</h1>
+          <h1 id="pageTitle">Início</h1>
         </div>
         <div class="top-actions">
           <span class="status-pill">✅ Site público</span>
@@ -52,11 +51,11 @@
         <div class="hero-card">
           <div class="hero-content">
             <span class="cup-badge">🏆 Valencia · Legion · PPK</span>
-            <h2>Ranking em tempo real, conferência transparente e resenha liberada.</h2>
-            <p>Plataforma pública de conferência automática do bolão. Os dados são somente leitura: aqui ninguém lança resultado, ninguém altera aposta e ninguém mexe na pontuação.</p>
+            <h2>Conferência automática, pública e transparente do bolão.</h2>
+            <p>Este site substitui a conferência pelo Base44. A área pública é somente leitura: aqui ninguém lança resultado, altera aposta ou mexe manualmente na pontuação.</p>
             <div class="hero-buttons">
               <button class="btn primary" data-go="ranking">Ver ranking</button>
-              <button class="btn ghost" data-go="palpites">Conferir participante</button>
+              <button class="btn ghost" data-go="conferencia">Conferir minha aposta</button>
             </div>
           </div>
           <div class="podium" id="podium"></div>
@@ -70,10 +69,15 @@
             <div id="homeTop10" class="rank-list"></div>
           </section>
           <section class="panel">
-            <div class="panel-head"><h3>🎯 Últimos jogos computados</h3><button class="link-btn" data-go="jogos">todos os jogos</button></div>
-            <div id="recentGames" class="game-list compact"></div>
+            <div class="panel-head"><h3>⏳ Próximos jogos pendentes</h3><button class="link-btn" data-go="resultados">todos os resultados</button></div>
+            <div id="pendingGamesHome" class="game-list compact"></div>
           </section>
         </div>
+
+        <section class="panel full info-panel">
+          <div class="panel-head"><h3>🔒 Transparência sem edição pública</h3></div>
+          <p>Os pontos são recalculados a partir de dados estruturados: apostas, resultados, classificados e regras documentadas. Divergências devem ser conferidas cruzando as abas Ranking, Palpites e Resultados.</p>
+        </section>
       </section>
 
       <section class="page" id="page-ranking">
@@ -81,17 +85,13 @@
           <div class="panel-head wrap">
             <div>
               <h3>Ranking geral</h3>
-              <p>Classificação recalculada a partir das regras oficiais e dos palpites válidos.</p>
+              <p>Classificação completa, com colunas agrupadas por tipo de ponto e por fase. Clique no participante para explodir a pontuação.</p>
             </div>
-            <input id="rankingSearch" class="search" placeholder="Buscar participante..." />
+            <div class="toolbar"><input id="rankingSearch" class="search" placeholder="Buscar participante..." /><button id="rankingExport" class="btn tiny">Copiar top 10</button></div>
           </div>
-          <div class="table-wrap rank-table">
+          <div class="table-wrap rank-table grouped-table">
             <table>
-              <thead>
-                <tr>
-                  <th>#</th><th>Participante</th><th>Total</th><th>Grupos</th><th>Jogos</th><th>Classif.</th><th>Mata-mata</th><th>Conf.</th><th>Avanço</th><th>Placar</th><th>Crav.</th>
-                </tr>
-              </thead>
+              <thead id="rankingHead"></thead>
               <tbody id="rankingBody"></tbody>
             </table>
           </div>
@@ -102,23 +102,36 @@
         <section class="panel full">
           <div class="panel-head wrap">
             <div>
-              <h3>Palpites por participante</h3>
-              <p>Escolha uma pessoa para abrir os acertos e erros jogo a jogo.</p>
+              <h3>Palpites auditáveis</h3>
+              <p>Filtre por participante, seleção, fase, jogo ou status. A pontuação vem do mesmo motor do Ranking.</p>
             </div>
-            <select id="participantSelect" class="select"></select>
+            <div class="filters-grid">
+              <input id="palpiteSearch" class="search" placeholder="Buscar participante..." />
+              <select id="palpiteTeam" class="select"></select>
+              <select id="palpitePhase" class="select"></select>
+              <input id="palpiteGame" class="search small" placeholder="Jogo #" />
+              <select id="palpiteStatus" class="select"></select>
+            </div>
           </div>
-          <div id="participantDetail" class="participant-detail empty-state">Selecione um participante para conferir a pontuação.</div>
+          <div class="panel-subhead"><span id="palpitesCount">0 palpites</span><span class="mini-label">limite visual inteligente para manter o site leve</span></div>
+          <div class="table-wrap">
+            <table class="mini-table"><thead><tr><th>Participante</th><th>Fase</th><th>Jogo</th><th>Palpite</th><th>Resultado</th><th>Status</th><th>Pts</th></tr></thead><tbody id="palpitesBody"></tbody></table>
+          </div>
         </section>
       </section>
 
-      <section class="page" id="page-jogos">
+      <section class="page" id="page-resultados">
         <section class="panel full">
           <div class="panel-head wrap">
             <div>
-              <h3>Jogos e resultados</h3>
-              <p>Resultados oficiais lançados até o momento e jogos pendentes.</p>
+              <h3>Resultados oficiais</h3>
+              <p>Consulta pública somente leitura. Jogos empatados no mata-mata exibem a seleção classificada.</p>
             </div>
-            <div class="filter-row" id="phaseFilters"></div>
+            <div class="filters-grid compact-filters">
+              <select id="resultPhase" class="select"></select>
+              <select id="resultStatus" class="select"><option value="Todos">Todos</option><option value="Finalizado">Concluídos</option><option value="Pendente">Pendentes</option><option value="Penaltis">Definidos nos pênaltis</option></select>
+              <input id="resultSearch" class="search" placeholder="Buscar seleção ou jogo #" />
+            </div>
           </div>
           <div id="games" class="games-grid"></div>
         </section>
@@ -126,48 +139,81 @@
 
       <section class="page" id="page-estatisticas">
         <div class="content-grid three" id="statsCards"></div>
+
         <section class="panel full">
-          <div class="panel-head"><h3>Jogos mais difíceis da fase de grupos</h3><span class="mini-label">menos cravadas</span></div>
+          <div class="panel-head wrap"><div><h3>📌 Ranking por fase</h3><p>Mostra apenas fases com resultados suficientes, para evitar confusão.</p></div></div>
+          <div id="phaseStats" class="phase-stats"></div>
+        </section>
+
+        <section class="panel full">
+          <div class="panel-head"><h3>🚀 Seleções mais apostadas por fase</h3><span class="mini-label">clique para ver apostadores</span></div>
+          <div id="teamPhaseStats" class="stats-grid"></div>
+        </section>
+
+        <section class="panel full">
+          <div class="panel-head"><h3>🏆 Campeão, vice, 3º e 4º</h3><span class="mini-label">distribuição das apostas finais</span></div>
+          <div id="finalsStats" class="content-grid four"></div>
+        </section>
+
+        <section class="panel full">
+          <div class="panel-head"><h3>🥅 Artilheiro</h3><span class="mini-label">ranking dos nomes apostados</span></div>
+          <div id="scorerStats" class="stats-list-wrap"></div>
+        </section>
+
+        <section class="panel full">
+          <div class="panel-head"><h3>🎯 Cravadas</h3><span class="mini-label">placares exatos</span></div>
+          <div id="exactStats" class="content-grid three"></div>
+        </section>
+
+        <section class="panel full">
+          <div class="panel-head"><h3>🦓 As zebras do bolão</h3><span class="mini-label">pouca gente viu essa chegando</span></div>
           <div id="hardGames" class="game-list"></div>
         </section>
-      </section>
 
-      <section class="page" id="page-comparar">
         <section class="panel full">
-          <div class="panel-head wrap">
-            <div><h3>Comparar participantes</h3><p>Compare lado a lado a composição dos pontos.</p></div>
-            <div class="compare-controls"><select id="compareA" class="select"></select><select id="compareB" class="select"></select></div>
-          </div>
-          <div id="compareResult" class="compare-grid"></div>
+          <div class="panel-head"><h3>✅ Jogos mais previsíveis</h3><span class="mini-label">mais acertadores</span></div>
+          <div id="easyGames" class="game-list"></div>
+        </section>
+
+        <section class="panel full">
+          <div class="panel-head"><h3>📈 Evolução do ranking</h3><span class="mini-label">histórico</span></div>
+          <div id="evolutionBox" class="empty-state big-empty"></div>
         </section>
       </section>
 
-      <section class="page" id="page-simulador">
+      <section class="page" id="page-conferencia">
         <section class="panel full">
-          <div class="panel-head"><div><h3>Simulador</h3><p>Área pública sem gravação. Os jogos pendentes aparecem para acompanhamento, mas o lançamento oficial fica fora do GitHub público.</p></div></div>
-          <div id="simulatorBox" class="simulator-box"></div>
+          <div class="panel-head wrap">
+            <div>
+              <h3>Conferência individual</h3>
+              <p>Escolha um participante para ver total, fases, cravadas, jogos que pontuaram e jogos sem pontuação.</p>
+            </div>
+            <select id="participantSelect" class="select"></select>
+          </div>
+          <div id="participantDetail" class="participant-detail empty-state">Selecione um participante para conferir a pontuação.</div>
         </section>
       </section>
 
       <section class="page" id="page-regras">
         <section class="panel full rules-panel">
-          <div class="panel-head"><h3>Regras do Bolão</h3><span class="mini-label">motor de cálculo</span></div>
-          <div class="rules-grid">
-            <article><strong>Fase de grupos</strong><p>Placar exato vale 5 pontos. Vencedor ou empate correto vale 3 pontos. A cravada substitui o acerto simples.</p></article>
-            <article><strong>Classificados</strong><p>Cada seleção corretamente prevista entre as 32 classificadas vale 5 pontos, sem importar a posição no grupo.</p></article>
-            <article><strong>Mata-mata</strong><p>Confronto correto no slot vale 5 pontos. Seleção que avança vale 5 pontos. Placar exato soma +3 apenas quando o confronto aconteceu e o classificado foi previsto corretamente.</p></article>
-            <article><strong>Bônus finais</strong><p>Campeão: 70 pontos. Vice: 50. 3º lugar: 30. 4º lugar: 10. Artilheiro: 40.</p></article>
-          </div>
+          <div class="panel-head"><h3>Regras de pontuação</h3><span class="mini-label">motor de cálculo preservado</span></div>
+          <div id="rulesGrid" class="rules-grid"></div>
+          <div class="audit-note"><strong>Critério de conferência:</strong> a pontuação é calculada automaticamente a partir dos resultados cadastrados. Em caso de dúvida, compare Ranking, Palpites e Resultados.</div>
         </section>
       </section>
     </main>
   </div>
 
+  <dialog id="participantModal" class="modal">
+    <div class="modal-head"><div><h2 id="modalTitle">Participante</h2><p id="modalSub"></p></div><button id="modalClose" class="icon-btn">✕</button></div>
+    <div id="modalBody"></div>
+  </dialog>
+
   <nav class="mobile-nav" aria-label="Navegação mobile">
-    <button class="active" data-page="home">🏠<span>Home</span></button>
+    <button class="active" data-page="home">🏠<span>Início</span></button>
     <button data-page="ranking">🏅<span>Ranking</span></button>
     <button data-page="palpites">📝<span>Palpites</span></button>
-    <button data-page="jogos">⚽<span>Jogos</span></button>
+    <button data-page="resultados">⚽<span>Jogos</span></button>
     <button data-page="estatisticas">📊<span>Stats</span></button>
   </nav>
 
