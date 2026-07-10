@@ -1,45 +1,50 @@
-# Bolão Copa 2026 · GitHub público V2
+# Bolão Copa 2026 · Base44 Transparente V3
 
-Pacote público para GitHub Pages, sem página administrativa exposta.
+Versão pública de conferência do Bolão da Copa 2026 para GitHub Pages.
 
-## O que mudou nesta versão
+## O que mudou na V3
 
-- Interface refeita para ficar mais próxima da experiência do app original do Base44: menu lateral, menu mobile, cards, badges, cores esportivas e navegação por abas.
-- Bandeiras exibidas como imagens via FlagCDN, com fallback por emoji/texto caso a imagem não carregue.
-- Ranking geral com blocos de colunas por síntese, fases e apostas finais.
-- Detalhamento explosível do participante com prova da soma.
-- Aba de cravadas com lista nominal dos jogos cravados por participante.
-- Palpites com filtros por participante, seleção, fase, jogo e status.
-- Resultados oficiais somente leitura.
-- Estatísticas por fase, seleções apostadas, apostas finais, artilheiro, cravadas, zebras e jogos previsíveis.
-- Auditoria interna no front-end para conferir total por participante, cravadas, pontuações inválidas e mata-mata sem classificado.
-
-## Cálculo
-
-O motor de cálculo foi preservado em `src/engine.js`.
-
-Regra crítica preservada:
-
-- Placar exato no mata-mata vale **3 pontos**, não 5.
-- O bônus de placar exato no mata-mata exige confronto correto e classificado correto no jogo.
-- A Suíça permanece como classificada no jogo #96, conforme dados atuais.
-
-## Segurança
-
-Este pacote não contém `admin.html`, `admin.js`, `gestao-resultados.html` ou auditoria privada com e-mails. É apenas o site público de conferência.
-
-Para atualizar resultados, use a ferramenta administrativa local/privada e suba somente o novo `data/resultados.json` validado.
+- Bandeiras agora usam emoji como fonte principal, sem depender de CDN externa. Isso evita que elas desapareçam no GitHub Pages.
+- Reintroduzida a área separada `gestao-resultados.html` para lançamento local dos próximos resultados.
+- A área de gestão não aparece no menu público.
+- A gestão permite editar placar, classificado no mata-mata, validar inconsistências, recalcular prévia e exportar `resultados.json`.
+- A evolução do bolão agora é calculada automaticamente por marcos da competição: 1ª rodada dos grupos, 2ª rodada, fim dos grupos, 1/16 avos e oitavas.
+- A tela de cravadas foi reforçada para mostrar jogo, palpite, resultado real, motivo e pontos.
+- O motor de cálculo foi preservado.
 
 ## Publicação no GitHub Pages
 
-Envie o conteúdo desta pasta para a raiz do repositório público. O arquivo `index.html` deve ficar na raiz.
+Suba todos os arquivos deste pacote para a raiz do repositório.
 
-Depois, em Settings > Pages, publique a branch `main` a partir de `/root`.
+O arquivo `index.html` precisa ficar na raiz.
+
+## Lançamento de novos resultados
+
+Acesse diretamente:
+
+`https://SEU-USUARIO.github.io/SEU-REPOSITORIO/gestao-resultados.html`
+
+Digite `GESTAO` para abrir a edição local.
+
+Fluxo:
+
+1. Lance placar e classificado, quando for mata-mata.
+2. Recalcule a prévia.
+3. Confira impacto no ranking.
+4. Exporte `resultados.json`.
+5. No GitHub, substitua `data/resultados.json` pelo arquivo exportado.
+6. Aguarde o GitHub Pages atualizar o site público.
+
+## Aviso de segurança
+
+GitHub Pages é estático. A página `gestao-resultados.html` não grava dados no servidor e não tem segurança real por senha. Ela serve como ferramenta local/de bastidor para gerar o JSON. Não coloque link para ela no menu público e não publique dados privados.
 
 ## Testes
+
+Para testar localmente com Node:
 
 ```bash
 npm test
 ```
 
-Os testes verificam regras básicas do motor, inclusive placar exato no mata-mata valendo 3 pontos.
+O teste garante, entre outros pontos, que placar exato no mata-mata vale 3 pontos, não 5.
