@@ -1,50 +1,36 @@
-# Bolão Copa 2026 · Base44 Transparente V3
+# Bolão Copa 2026 — GitHub Pages V6
 
-Versão pública de conferência do Bolão da Copa 2026 para GitHub Pages.
+Pacote público completo para subir na raiz do repositório do GitHub Pages.
 
-## O que mudou na V3
+## O que mudou nesta versão
 
-- Bandeiras agora usam emoji como fonte principal, sem depender de CDN externa. Isso evita que elas desapareçam no GitHub Pages.
-- Reintroduzida a área separada `gestao-resultados.html` para lançamento local dos próximos resultados.
-- A área de gestão não aparece no menu público.
-- A gestão permite editar placar, classificado no mata-mata, validar inconsistências, recalcular prévia e exportar `resultados.json`.
-- A evolução do bolão agora é calculada automaticamente por marcos da competição: 1ª rodada dos grupos, 2ª rodada, fim dos grupos, 1/16 avos e oitavas.
-- A tela de cravadas foi reforçada para mostrar jogo, palpite, resultado real, motivo e pontos.
-- O motor de cálculo foi preservado.
+- Ajuste visual forte inspirado no padrão do app Base44: hero escuro, cards arredondados, menu lateral, badges, sombras suaves e layout mais limpo.
+- Inclusão dos mascotes do bolão em `assets/mascotes-bolao.svg`.
+- Bandeiras passam a usar imagens do FlagCDN como fonte principal, pois emojis de bandeira não aparecem corretamente em muitos navegadores no Windows.
+- Fallback textual por sigla caso alguma bandeira não carregue.
+- Correções de responsividade para evitar caixas truncadas, principalmente em cards, ranking, resultados, estatísticas e modal de conferência.
+- Mantidos `gestao-resultados.html` e `admin.js` para lançamento local/simulado dos próximos resultados, sem link no menu público.
+- Motor de cálculo preservado.
 
-## Publicação no GitHub Pages
+## Como publicar
 
-Suba todos os arquivos deste pacote para a raiz do repositório.
+Suba todo o conteúdo desta pasta na raiz do repositório. O arquivo `index.html` precisa ficar na raiz, junto com `app.js`, `styles.css`, `data/`, `src/`, `scripts/`, `tests/` e `assets/`.
 
-O arquivo `index.html` precisa ficar na raiz.
+## Gestão de resultados
 
-## Lançamento de novos resultados
+A gestão não aparece no menu público. Acesse diretamente:
 
-Acesse diretamente:
+`/gestao-resultados.html`
 
-`https://SEU-USUARIO.github.io/SEU-REPOSITORIO/gestao-resultados.html`
-
-Digite `GESTAO` para abrir a edição local.
-
-Fluxo:
-
-1. Lance placar e classificado, quando for mata-mata.
-2. Recalcule a prévia.
-3. Confira impacto no ranking.
-4. Exporte `resultados.json`.
-5. No GitHub, substitua `data/resultados.json` pelo arquivo exportado.
-6. Aguarde o GitHub Pages atualizar o site público.
-
-## Aviso de segurança
-
-GitHub Pages é estático. A página `gestao-resultados.html` não grava dados no servidor e não tem segurança real por senha. Ela serve como ferramenta local/de bastidor para gerar o JSON. Não coloque link para ela no menu público e não publique dados privados.
+Digite `GESTAO`, lance os resultados, confira a prévia e exporte o novo `resultados.json`. Depois substitua `data/resultados.json` no GitHub e faça commit.
 
 ## Testes
 
-Para testar localmente com Node:
+Foram executados:
 
 ```bash
 npm test
+node scripts/auditar.js
 ```
 
-O teste garante, entre outros pontos, que placar exato no mata-mata vale 3 pontos, não 5.
+Resultado da auditoria: 58 participantes antes, 58 depois, 0 divergências de ranking.

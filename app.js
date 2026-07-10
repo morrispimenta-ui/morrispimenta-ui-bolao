@@ -1,6 +1,9 @@
 import { calculate, isPlayed, phaseKey } from './src/engine.js';
 
 const files = ['regras','times','resultados','participantes','apostas_detalhes','ranking','estatisticas'];
+const CACHE_BUST = Date.now();
+const LOCAL_RESULTS_KEY = 'bolao_resultados_publico_local_v5';
+let usingLocalResults = false;
 const titles = {home:'Início', ranking:'Ranking Geral', palpites:'Palpites', resultados:'Resultados', estatisticas:'Estatísticas', conferencia:'Conferência Individual', comparar:'Comparar', regras:'Regras'};
 const allPhases = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
 const phaseLabels = {'Rodada de 32':'1/16 avos','Oitavas de Final':'Oitavas','Quartas de Final':'Quartas','Semifinais':'Semifinal','3º Lugar':'3º lugar','Fase de Grupos':'Fase de grupos'};
@@ -14,14 +17,27 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 
 async function loadData(){
   try{
-    for(const f of files) DATA[f] = await fetch(`data/${f}.json`).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
+    for(const f of files) {
+      DATA[f] = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
+    }
+    const localRaw = localStorage.getItem(LOCAL_RESULTS_KEY);
+    if(localRaw){
+      try{
+        const parsed = JSON.parse(localRaw);
+        const localResults = Array.isArray(parsed) ? parsed : parsed.resultados;
+        if(Array.isArray(localResults) && localResults.length){
+          DATA.resultados = localResults;
+          usingLocalResults = true;
+        }
+      }catch(e){ console.warn('Resultados locais ignorados', e); }
+    }
     teamMap = Object.fromEntries(DATA.times.map(t=>[t.code,t]));
     gamesById = Object.fromEntries(DATA.resultados.map(g=>[g.game_id,g]));
     CALC = calculate(DATA);
     detailsByEntry = CALC.details;
     enrichExactLists();
     init();
-    toast('Dados carregados. Ranking recalculado sem total manual.');
+    toast(usingLocalResults ? 'Dados carregados com resultados locais: ranking recalculado.' : 'Dados carregados. Ranking recalculado sem total manual.');
   }catch(err){ console.error(err); toast('Erro ao carregar dados. Verifique os arquivos JSON.', true); }
 }
 
@@ -29,13 +45,13 @@ function teamName(code){ if(!code) return 'A definir'; return teamMap[code]?.nam
 function flagEmoji(code){ return teamMap[code]?.flag || '🏳️'; }
 function flagImg(code){
   if(!code) return '';
-  // V3: usar emoji como bandeira principal. Isso evita falha por CDN/bloqueio externo no GitHub Pages.
-  // A imagem remota fica apenas como reforço visual, e o emoji permanece sempre visível.
+  // V6: imagem de bandeira como fonte principal. Emojis de bandeira não renderizam corretamente no Windows.
+  // Se a imagem falhar, aparece um fallback textual com a sigla da seleção.
   const iso = TEAM_ISO[code];
   const label = esc(teamName(code));
-  const emoji = `<span class="flag-emoji" role="img" aria-label="Bandeira de ${label}">${flagEmoji(code)}</span>`;
-  const img = iso ? `<img class="flag-img optional-flag-img" src="https://flagcdn.com/w20/${iso}.png" alt="" loading="lazy" onerror="this.remove()"/>` : '';
-  return `<span class="flag-stack">${emoji}${img}</span>`;
+  const fallback = `<span class="flag-code" title="${label}">${esc(code)}</span>`;
+  const img = iso ? `<img class="flag-img" src="https://flagcdn.com/w40/${iso}.png" alt="Bandeira de ${label}" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='inline-grid'}"/>` : '';
+  return `<span class="flag-stack">${img}${fallback}</span>`;
 }
 function team(code, compact=false){ return code ? `<span class="team-chip ${compact?'compact':''}">${flagImg(code)}<span>${esc(teamName(code))}</span></span>` : '<span class="muted">A definir</span>'; }
 function teamText(code){ return code ? `${flagEmoji(code)} ${teamName(code)}` : 'A definir'; }
@@ -101,7 +117,7 @@ function renderHome(){
   const ranking = CALC.ranking, pending = DATA.resultados.filter(isPending).sort((a,b)=>a.game_id-b.game_id), played = DATA.resultados.filter(isPlayed).length;
   const mostExact = [...ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0];
   $('podium').innerHTML = ranking.slice(0,3).map((r,i)=>`<div class="podium-card podium-${i+1}"><div class="podium-pos">${i===0?'🥇':i===1?'🥈':'🥉'}</div><div><div class="podium-name">${esc(r.display_name)}</div><span class="podium-meta">${r.grupos} grupos · ${r.mata_mata} mata-mata · ${r.cravadas} 🎯</span></div><div class="podium-points">${r.total}</div></div>`).join('');
-  const audit = auditInternal(); $('auditBanner').className = `audit-banner ${audit.length?'bad':'good'}`; $('auditBanner').innerHTML = audit.length ? `⚠️ Auditoria encontrou ${audit.length} alerta(s). Verifique os detalhes antes de divulgar.` : `✅ Auditoria interna OK: totais batem com os detalhes, sem NaN, sem pontos negativos e com cravadas conferíveis.`;
+  const audit = auditInternal(); $('auditBanner').className = `audit-banner ${audit.length?'bad':'good'}`; $('auditBanner').innerHTML = (usingLocalResults ? `🧪 <b>Modo local/simulação ativo neste navegador.</b> O ranking abaixo foi recalculado com resultados lançados na gestão local. Para todos verem igual, exporte e publique o <code>data/resultados.json</code> no GitHub. <button class="link-btn" id="clearLocalResults">limpar simulação</button><br>` : '') + (audit.length ? `⚠️ Auditoria encontrou ${audit.length} alerta(s). Verifique os detalhes antes de divulgar.` : `✅ Auditoria interna OK: totais batem com os detalhes, sem NaN, sem pontos negativos e com cravadas conferíveis.`); setTimeout(()=>{ const clear=$('clearLocalResults'); if(clear) clear.onclick=()=>{ localStorage.removeItem(LOCAL_RESULTS_KEY); location.reload(); }; },0);
   const kpis = [['Participantes', DATA.estatisticas.entries_valid, `${DATA.estatisticas.entries_total} apostas no relatório`], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${mostExact?.cravadas || 0} placares exatos`], ['Última atualização', lastUpdated(), 'dados estruturados']];
   $('kpis').innerHTML = kpis.map(([label,value,sub])=>`<div class="kpi"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></div>`).join('');
   $('homeTop10').innerHTML = ranking.slice(0,10).map(rankItem).join('');

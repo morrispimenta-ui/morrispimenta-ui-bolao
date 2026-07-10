@@ -1,6 +1,9 @@
 import { calculate, isPlayed } from './src/engine.js';
 
 const files = ['regras','times','resultados','participantes','apostas_detalhes','estatisticas'];
+const CACHE_BUST = Date.now();
+const ADMIN_LOCAL_KEY = 'bolao_resultados_local_v5';
+const PUBLIC_LOCAL_KEY = 'bolao_resultados_publico_local_v5';
 let DATA={}, originalResults=[], localResults=[], originalCalc={}, localCalc={}, showMode='pending';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -11,9 +14,9 @@ const phaseOrder = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','
 const bracketMap = {101:[97,98],102:[99,100],104:[101,102]};
 
 async function loadData(){
-  for(const f of files) DATA[f] = await fetch(`data/${f}.json`).then(r=>r.json());
+  for(const f of files) DATA[f] = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
   originalResults = structuredClone(DATA.resultados);
-  const saved = localStorage.getItem('bolao_resultados_local_v3');
+  const saved = localStorage.getItem(ADMIN_LOCAL_KEY);
   localResults = saved ? JSON.parse(saved) : structuredClone(originalResults);
   originalCalc = calculate({...DATA, resultados: structuredClone(originalResults)});
   localCalc = calculate({...DATA, resultados: structuredClone(localResults)});
@@ -25,15 +28,16 @@ function bind(){
   $('showPending').onclick=()=>{ showMode='pending'; renderAdmin(); };
   $('showAll').onclick=()=>{ showMode='all'; renderAdmin(); };
   $('phaseFilter').onchange=()=>renderAdmin();
-  $('resetLocal').onclick=()=>{ if(confirm('Descartar alterações locais e voltar aos resultados publicados?')){ localStorage.removeItem('bolao_resultados_local_v3'); localResults=structuredClone(originalResults); recalc(); renderAdmin(); toast('Alterações locais descartadas.'); }};
+  $('resetLocal').onclick=()=>{ if(confirm('Descartar alterações locais e voltar aos resultados publicados?')){ localStorage.removeItem(ADMIN_LOCAL_KEY); localStorage.removeItem(PUBLIC_LOCAL_KEY); localResults=structuredClone(originalResults); recalc(); renderAdmin(); toast('Alterações locais descartadas.'); }};
   $('recalc').onclick=()=>{ recalc(); renderAdmin(); toast('Prévia recalculada.'); };
-  $('downloadResults').onclick=()=>download('resultados.json', JSON.stringify(localResults,null,2));
-  $('downloadRanking').onclick=()=>download('ranking_previo.json', JSON.stringify(localCalc.ranking,null,2));
+  $('downloadResults').onclick=()=>{ recalc(); download('resultados.json', JSON.stringify(localResults,null,2)); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub.'); };
+  $('downloadRanking').onclick=()=>{ recalc(); download('ranking_previo.json', JSON.stringify(localCalc.ranking,null,2)); };
   if($('inferBracket')) $('inferBracket').onclick=()=>{ normalizeAll(true); recalc(); renderAdmin(); toast('Chaves futuras atualizadas com base nos classificados já lançados.'); };
-  if($('downloadBundle')) $('downloadBundle').onclick=()=>download('bolao-dados-atualizados.json', JSON.stringify({resultados: localResults, ranking_previo: localCalc.ranking, gerado_em: new Date().toISOString()}, null, 2));
+  if($('downloadBundle')) $('downloadBundle').onclick=()=>{ recalc(); download('bolao-dados-atualizados.json', JSON.stringify({resultados: localResults, ranking_previo: localCalc.ranking, gerado_em: new Date().toISOString()}, null, 2)); };
+  if($('openPublicLocal')) $('openPublicLocal').onclick=()=>{ recalc(); window.open('index.html','_blank'); };
 }
 function renderFilters(){ $('phaseFilter').innerHTML = phaseOrder.map(p=>`<option value="${p}">${p}</option>`).join(''); }
-function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem('bolao_resultados_local_v3', JSON.stringify(localResults)); renderPreview(); }
+function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem(ADMIN_LOCAL_KEY, JSON.stringify(localResults)); localStorage.setItem(PUBLIC_LOCAL_KEY, JSON.stringify({resultados: localResults, gerado_em: new Date().toISOString()})); renderPreview(); }
 function normalizeGame(g){
   if(g.home === '') g.home = null;
   if(g.away === '') g.away = null;
@@ -118,7 +122,7 @@ function renderErrors(){ const errs=validate(); $('adminErrors').innerHTML = err
 function renderPreview(){
   const before=Object.fromEntries(originalCalc.ranking.map(r=>[r.entry_id,r]));
   const changed=localCalc.ranking.map(r=>({r, old:before[r.entry_id]})).filter(x=>!x.old || x.r.total!==x.old.total || x.r.posicao!==x.old.posicao).slice(0,12);
-  $('preview').innerHTML = `<article><span>Líder prévio</span><b>${esc(localCalc.ranking[0]?.display_name || '—')}</b><p>${localCalc.ranking[0]?.total || 0} pontos</p></article>` + (changed.length? changed.map(({r,old})=>`<article><span>${esc(r.display_name)}</span><b>${old?.posicao || '—'}º → ${r.posicao}º</b><p>${old?.total ?? '—'} → ${r.total} pontos</p></article>`).join('') : '<article><b>Sem mudança</b><p>Nenhuma diferença no ranking em relação à base publicada.</p></article>');
+  $('preview').innerHTML = `<article><span>Líder prévio</span><b>${esc(localCalc.ranking[0]?.display_name || '—')}</b><p>${localCalc.ranking[0]?.total || 0} pontos</p></article><article><span>Participantes recalculados</span><b>${localCalc.ranking.length}</b><p>${changed.length} com mudança de posição ou pontos vs. base publicada</p></article>` + (changed.length? changed.map(({r,old})=>`<article><span>${esc(r.display_name)}</span><b>${old?.posicao || '—'}º → ${r.posicao}º</b><p>${old?.total ?? '—'} → ${r.total} pontos</p></article>`).join('') : '<article><b>Sem mudança</b><p>Nenhuma diferença no ranking em relação à base publicada. Se você acabou de lançar um jogo, confira se o jogo está como Finalizado, tem placar e classificado no mata-mata.</p></article>');
 }
 function download(filename, content){ const blob=new Blob([content],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); toast(`${filename} gerado. Agora suba esse arquivo no GitHub.`); }
 function toast(msg, error=false){ const t=$('toast'); t.textContent=msg; t.style.background=error?'var(--red)':'var(--navy)'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
