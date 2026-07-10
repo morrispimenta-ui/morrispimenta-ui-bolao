@@ -8,6 +8,7 @@ const teamName = code => DATA.times?.find(t=>t.code===code)?.name || code || 'A 
 const teamFlag = code => DATA.times?.find(t=>t.code===code)?.flag || '🏳️';
 const team = code => `${teamFlag(code)} ${teamName(code)}`;
 const phaseOrder = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
+const bracketMap = {101:[97,98],102:[99,100],104:[101,102]};
 
 async function loadData(){
   for(const f of files) DATA[f] = await fetch(`data/${f}.json`).then(r=>r.json());
@@ -28,10 +29,16 @@ function bind(){
   $('recalc').onclick=()=>{ recalc(); renderAdmin(); toast('Prévia recalculada.'); };
   $('downloadResults').onclick=()=>download('resultados.json', JSON.stringify(localResults,null,2));
   $('downloadRanking').onclick=()=>download('ranking_previo.json', JSON.stringify(localCalc.ranking,null,2));
+  if($('inferBracket')) $('inferBracket').onclick=()=>{ normalizeAll(true); recalc(); renderAdmin(); toast('Chaves futuras atualizadas com base nos classificados já lançados.'); };
+  if($('downloadBundle')) $('downloadBundle').onclick=()=>download('bolao-dados-atualizados.json', JSON.stringify({resultados: localResults, ranking_previo: localCalc.ranking, gerado_em: new Date().toISOString()}, null, 2));
 }
 function renderFilters(){ $('phaseFilter').innerHTML = phaseOrder.map(p=>`<option value="${p}">${p}</option>`).join(''); }
 function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem('bolao_resultados_local_v3', JSON.stringify(localResults)); renderPreview(); }
 function normalizeGame(g){
+  if(g.home === '') g.home = null;
+  if(g.away === '') g.away = null;
+  g.home_name = teamName(g.home);
+  g.away_name = teamName(g.away);
   const hg = g.home_goals === '' || g.home_goals == null ? null : Number(g.home_goals);
   const ag = g.away_goals === '' || g.away_goals == null ? null : Number(g.away_goals);
   if(g.status==='Pendente') { g.home_goals=null; g.away_goals=null; g.score=null; g.winner=null; g.advancer=null; return; }
@@ -44,11 +51,31 @@ function normalizeGame(g){
     if(g.game_id>=73 && !g.advancer && g.winner) g.advancer=g.winner;
   }
 }
-function normalizeAll(){ localResults.forEach(normalizeGame); }
+function getGame(id){ return localResults.find(x=>x.game_id===id); }
+function loserOf(g){ if(!g?.home || !g?.away || !g?.advancer) return null; return g.advancer===g.home ? g.away : g.home; }
+function setMatchIfNeeded(gameId, home, away, force=false){
+  const g=getGame(gameId); if(!g || !home || !away) return false;
+  if(force || !g.home || !g.away || g.status==='Pendente'){
+    g.home=home; g.away=away; g.home_name=teamName(home); g.away_name=teamName(away);
+    if(g.advancer && ![home, away].includes(g.advancer)) g.advancer=null;
+    return true;
+  }
+  return false;
+}
+function deriveBracket(force=false){
+  const q97=getGame(97), q98=getGame(98), q99=getGame(99), q100=getGame(100), s101=getGame(101), s102=getGame(102);
+  setMatchIfNeeded(101, q97?.advancer, q98?.advancer, force);
+  setMatchIfNeeded(102, q99?.advancer, q100?.advancer, force);
+  setMatchIfNeeded(104, s101?.advancer, s102?.advancer, force);
+  const l101=loserOf(s101), l102=loserOf(s102); setMatchIfNeeded(103, l101, l102, force);
+}
+function normalizeAll(forceBracket=false){ localResults.forEach(normalizeGame); deriveBracket(forceBracket); localResults.forEach(normalizeGame); }
 function validate(){
   const errs=[]; normalizeAll();
   for(const g of localResults){
     if(g.status==='Pendente') continue;
+    if(!g.home || !g.away) errs.push(`#${g.game_id}: jogo concluído precisa ter as duas seleções definidas.`);
+    if(g.home && g.away && g.home===g.away) errs.push(`#${g.game_id}: mandante e visitante não podem ser a mesma seleção.`);
     if(g.home_goals==null || g.away_goals==null) errs.push(`#${g.game_id}: jogo concluído precisa ter placar.`);
     if(g.home_goals<0 || g.away_goals<0) errs.push(`#${g.game_id}: placar não pode ser negativo.`);
     if(g.game_id>=73){
@@ -68,15 +95,22 @@ function renderAdmin(){
   renderErrors();
 }
 function kpi(label,value){ return `<article><span>${esc(label)}</span><b>${esc(value)}</b></article>`; }
+function teamOptions(selected){ return `<option value="">A definir</option>` + (DATA.times||[]).map(t=>`<option value="${t.code}" ${selected===t.code?'selected':''}>${esc(t.flag||'🏳️')} ${esc(t.name)} (${t.code})</option>`).join(''); }
 function rowHTML(g){
-  const advOptions = `<option value="">—</option><option value="${g.home}" ${g.advancer===g.home?'selected':''}>${team(g.home)}</option><option value="${g.away}" ${g.advancer===g.away?'selected':''}>${team(g.away)}</option>`;
-  return `<tr><td><b>#${g.game_id}</b></td><td>${esc(g.phase||'')}</td><td>${team(g.home)}</td><td>${team(g.away)}</td><td><input type="number" min="0" data-id="${g.game_id}" data-field="home_goals" value="${g.home_goals ?? ''}"></td><td><input type="number" min="0" data-id="${g.game_id}" data-field="away_goals" value="${g.away_goals ?? ''}"></td><td><select data-id="${g.game_id}" data-field="advancer" ${g.game_id<73?'disabled':''}>${advOptions}</select></td><td><select data-id="${g.game_id}" data-field="status"><option ${g.status==='Pendente'?'selected':''}>Pendente</option><option ${g.status==='Finalizado'?'selected':''}>Finalizado</option></select></td></tr>`;
+  const advOptions = `<option value="">—</option>` + [g.home,g.away].filter(Boolean).map(code=>`<option value="${code}" ${g.advancer===code?'selected':''}>${team(code)}</option>`).join('');
+  const futureEditable = g.game_id>=97;
+  const homeCell = futureEditable ? `<select data-id="${g.game_id}" data-field="home">${teamOptions(g.home)}</select>` : team(g.home);
+  const awayCell = futureEditable ? `<select data-id="${g.game_id}" data-field="away">${teamOptions(g.away)}</select>` : team(g.away);
+  const autoHint = g.game_id>=101 ? `<small class="muted-text">chave automática se fases anteriores tiverem classificado</small>` : '';
+  return `<tr><td><b>#${g.game_id}</b>${autoHint}</td><td>${esc(g.phase||'')}</td><td>${homeCell}</td><td>${awayCell}</td><td><input type="number" min="0" data-id="${g.game_id}" data-field="home_goals" value="${g.home_goals ?? ''}"></td><td><input type="number" min="0" data-id="${g.game_id}" data-field="away_goals" value="${g.away_goals ?? ''}"></td><td><select data-id="${g.game_id}" data-field="advancer" ${g.game_id<73?'disabled':''}>${advOptions}</select></td><td><select data-id="${g.game_id}" data-field="status"><option ${g.status==='Pendente'?'selected':''}>Pendente</option><option ${g.status==='Finalizado'?'selected':''}>Finalizado</option></select></td></tr>`;
 }
 function onEdit(e){
   const id=Number(e.target.dataset.id), field=e.target.dataset.field; const g=localResults.find(x=>x.game_id===id); if(!g) return;
   let val=e.target.value;
   if(field==='home_goals' || field==='away_goals') val = val==='' ? null : Number(val);
+  if((field==='home' || field==='away') && val==='') val=null;
   g[field]=val;
+  if((field==='home' || field==='away') && g.advancer && ![g.home,g.away].includes(g.advancer)) g.advancer=null;
   if(field==='home_goals' || field==='away_goals') g.status='Finalizado';
   normalizeGame(g); recalc(); renderAdmin();
 }

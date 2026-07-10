@@ -25,7 +25,7 @@
       <div class="hero-content">
         <span class="cup-badge">🔐 Rota separada · não aparece no menu público</span>
         <h2>Gestão local de resultados</h2>
-        <p>Use esta tela para lançar a sequência da Copa. Em GitHub Pages, nada é gravado no servidor: você edita localmente, vê o impacto no ranking, exporta o <b>resultados.json</b> e faz commit manual no GitHub.</p>
+        <p>Use esta tela para lançar a sequência da Copa. Ao alterar placar, classificado ou chave futura, a prévia do ranking é recalculada imediatamente no navegador. Em GitHub Pages, nada é gravado no servidor: depois você exporta o <b>resultados.json</b> e faz commit manual no GitHub.</p>
         <div class="hero-buttons"><a class="btn ghost" href="index.html">Voltar ao site público</a></div>
       </div>
     </section>
@@ -50,8 +50,8 @@
       </div>
       <div class="admin-kpis" id="adminKpis"></div>
       <div id="adminErrors" class="error-list"></div>
-      <div class="table-wrap"><table class="mini-table admin-table"><thead><tr><th>#</th><th class="phase-cell">Fase</th><th class="wide">Mandante</th><th class="wide">Visitante</th><th>Gols M</th><th>Gols V</th><th>Classificado</th><th>Status</th></tr></thead><tbody id="adminRows"></tbody></table></div>
-      <div class="panel-head wrap" style="margin-top:16px"><div><h3>Prévia de impacto no ranking</h3><p>Recalcula com os resultados locais antes da exportação.</p></div><div class="admin-actions"><button id="recalc" class="btn tiny primary">Recalcular prévia</button><button id="downloadResults" class="btn tiny">Exportar resultados.json</button><button id="downloadRanking" class="btn tiny ghost-dark">Exportar ranking prévio</button></div></div>
+      <div class="admin-alert" style="margin:12px 0"><b>Cálculo automático:</b> qualquer alteração nesta tabela recalcula a prévia do ranking na hora. Para semifinais, 3º lugar e final, use o botão <b>Atualizar chaves automáticas</b> depois de lançar os classificados das fases anteriores.</div><div class="table-wrap"><table class="mini-table admin-table"><thead><tr><th>#</th><th class="phase-cell">Fase</th><th class="wide">Mandante</th><th class="wide">Visitante</th><th>Gols M</th><th>Gols V</th><th>Classificado</th><th>Status</th></tr></thead><tbody id="adminRows"></tbody></table></div>
+      <div class="panel-head wrap" style="margin-top:16px"><div><h3>Prévia de impacto no ranking</h3><p>Recalcula automaticamente com os resultados locais antes da exportação.</p></div><div class="admin-actions"><button id="inferBracket" class="btn tiny ghost-dark">Atualizar chaves automáticas</button><button id="recalc" class="btn tiny primary">Recalcular prévia</button><button id="downloadResults" class="btn tiny">Exportar resultados.json</button><button id="downloadRanking" class="btn tiny ghost-dark">Exportar ranking prévio</button><button id="downloadBundle" class="btn tiny ghost-dark">Exportar auditoria local</button></div></div>
       <div id="preview" class="preview-diff"></div>
     </section>
   </main>
