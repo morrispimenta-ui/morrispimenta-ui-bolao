@@ -1,9 +1,0 @@
-{
-  "type": "module",
-  "scripts": {
-    "calcular": "node scripts/calcular.js",
-    "test": "node tests/regras.test.js",
-    "auditar": "node scripts/auditar.js"
-  },
-  "devDependencies": {}
-}
