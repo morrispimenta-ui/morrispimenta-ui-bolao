@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { calculate } from '../src/engine.js';
 const read = name => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url),'utf8'));
-const data={resultados:read('resultados'),participantes:read('participantes'),apostas_detalhes:read('apostas_detalhes')};
+const data={resultados:read('resultados'),participantes:read('participantes'),apostas_detalhes:read('apostas_detalhes'),times:read('times')};
 const old=read('ranking');
 const current=calculate(structuredClone(data)).ranking;
 const divergences=[];

@@ -1,10 +1,10 @@
-import { calculate, isPlayed } from './src/engine.js';
+import { calculate, isPlayed, prepareResults } from './src/engine.js';
 
 const files = ['regras','times','resultados','participantes','apostas_detalhes','estatisticas'];
 const CACHE_BUST = Date.now();
-const ADMIN_LOCAL_KEY = 'bolao_resultados_local_v7';
-const PUBLIC_LOCAL_KEY = 'bolao_resultados_publico_local_v7';
-const LEGACY_KEYS = ['bolao_resultados_local_v5','bolao_resultados_publico_local_v5','bolao_resultados_local_v6','bolao_resultados_publico_local_v6'];
+const ADMIN_LOCAL_KEY = 'bolao_resultados_local_v8';
+const PUBLIC_LOCAL_KEY = 'bolao_resultados_publico_local_v8';
+const LEGACY_KEYS = ['bolao_resultados_local_v5','bolao_resultados_publico_local_v5','bolao_resultados_local_v6','bolao_resultados_publico_local_v6','bolao_resultados_local_v7','bolao_resultados_publico_local_v7'];
 let DATA={}, originalResults=[], localResults=[], originalCalc={}, localCalc={}, showMode='pending';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -32,12 +32,12 @@ function bind(){
   $('phaseFilter').onchange=()=>renderAdmin();
   $('resetLocal').onclick=()=>{ if(confirm('Descartar alterações locais e voltar aos resultados publicados?')){ localStorage.removeItem(ADMIN_LOCAL_KEY); localStorage.removeItem(PUBLIC_LOCAL_KEY); localResults=structuredClone(originalResults); recalc(); renderAdmin(); toast('Alterações locais descartadas.'); }};
   $('recalc').onclick=()=>{ recalc(); renderAdmin(); toast('Prévia recalculada.'); };
-  $('downloadResults').onclick=()=>{ recalc(); const errs=validate(); if(errs.length){ toast('Corrija as validações antes de exportar.', true); renderErrors(); return; } download('resultados.json', JSON.stringify(localResults,null,2)); showExportText(); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub.'); };
+  $('downloadResults').onclick=()=>{ recalc(); const errs=validate(); if(errs.length){ toast('Corrija as validações antes de exportar.', true); renderErrors(); return; } const prepared = prepareResults(localResults, DATA.times); download('resultados.json', JSON.stringify(prepared,null,2)); showExportText(prepared); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub.'); };
   $('downloadRanking').onclick=()=>{ recalc(); download('ranking_previo.json', JSON.stringify(localCalc.ranking,null,2)); };
   if($('inferBracket')) $('inferBracket').onclick=()=>{ normalizeAll(true); recalc(); renderAdmin(); toast('Chaves futuras atualizadas com base nos classificados já lançados.'); };
   if($('downloadBundle')) $('downloadBundle').onclick=()=>{ recalc(); download('bolao-dados-atualizados.json', JSON.stringify({resultados: localResults, ranking_previo: localCalc.ranking, gerado_em: new Date().toISOString()}, null, 2)); };
   if($('openPublicLocal')) $('openPublicLocal').onclick=()=>{ recalc(); window.open('index.html?simulacao=1','_blank'); };
-  if($('copyResults')) $('copyResults').onclick=()=>{ recalc(); showExportText(); const el=$('exportText'); el.select(); document.execCommand('copy'); toast('JSON copiado. Cole no arquivo data/resultados.json do GitHub.'); };
+  if($('copyResults')) $('copyResults').onclick=()=>{ recalc(); const prepared = prepareResults(localResults, DATA.times); showExportText(prepared); const el=$('exportText'); el.select(); document.execCommand('copy'); toast('JSON copiado. Cole no arquivo data/resultados.json do GitHub.'); };
   if($('hideExportText')) $('hideExportText').onclick=()=>{ $('exportBox').style.display='none'; };
 }
 function renderFilters(){ $('phaseFilter').innerHTML = phaseOrder.map(p=>`<option value="${p}">${p}</option>`).join(''); }
@@ -71,6 +71,10 @@ function setMatchIfNeeded(gameId, home, away, force=false){
   return false;
 }
 function deriveBracket(force=false){
+  setMatchIfNeeded(97, getGame(89)?.advancer, getGame(90)?.advancer, force);
+  setMatchIfNeeded(98, getGame(91)?.advancer, getGame(92)?.advancer, force);
+  setMatchIfNeeded(99, getGame(93)?.advancer, getGame(94)?.advancer, force);
+  setMatchIfNeeded(100, getGame(95)?.advancer, getGame(96)?.advancer, force);
   const q97=getGame(97), q98=getGame(98), q99=getGame(99), q100=getGame(100), s101=getGame(101), s102=getGame(102);
   setMatchIfNeeded(101, q97?.advancer, q98?.advancer, force);
   setMatchIfNeeded(102, q99?.advancer, q100?.advancer, force);
@@ -128,7 +132,7 @@ function renderPreview(){
   const changed=localCalc.ranking.map(r=>({r, old:before[r.entry_id]})).filter(x=>!x.old || x.r.total!==x.old.total || x.r.posicao!==x.old.posicao).slice(0,12);
   $('preview').innerHTML = `<article><span>Líder prévio</span><b>${esc(localCalc.ranking[0]?.display_name || '—')}</b><p>${localCalc.ranking[0]?.total || 0} pontos</p></article><article><span>Participantes recalculados</span><b>${localCalc.ranking.length}</b><p>${changed.length} com mudança de posição ou pontos vs. base publicada</p></article>` + (changed.length? changed.map(({r,old})=>`<article><span>${esc(r.display_name)}</span><b>${old?.posicao || '—'}º → ${r.posicao}º</b><p>${old?.total ?? '—'} → ${r.total} pontos</p></article>`).join('') : '<article><b>Sem mudança</b><p>Nenhuma diferença no ranking em relação à base publicada. Se você acabou de lançar um jogo, confira se o jogo está como Finalizado, tem placar e classificado no mata-mata.</p></article>');
 }
-function showExportText(){ const box=$('exportBox'); const el=$('exportText'); if(!box || !el) return; el.value=JSON.stringify(localResults,null,2); box.style.display='block'; }
+function showExportText(results=localResults){ const box=$('exportBox'); const el=$('exportText'); if(!box || !el) return; el.value=JSON.stringify(results,null,2); box.style.display='block'; }
 function download(filename, content){ const blob=new Blob([content],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); toast(`${filename} gerado. Agora suba esse arquivo no GitHub.`); }
 function toast(msg, error=false){ const t=$('toast'); t.textContent=msg; t.style.background=error?'var(--red)':'var(--navy)'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 loadData().catch(e=>{ console.error(e); toast('Erro ao carregar dados.', true); });

@@ -1,33 +1,33 @@
-# Bolão Copa 2026 · Conferência pública V7
+# Bolão Copa 2026 — V8 corrigida
 
-Pacote completo para GitHub Pages.
+Versão corrigida para GitHub Pages com:
 
-## O que mudou na V7
-
-- Fonte interna compactada para 10px em tabelas, cards de detalhe e caixas internas, reduzindo textos encavalados.
-- Motor de cálculo revisado e testado com regressão completa.
-- A coluna **Cravadas** agora conta apenas placares exatos da fase de grupos, preservando a forma exibida no relatório original. Placar exato no mata-mata segue valendo **3 pontos** e aparece como **bônus de placar no mata-mata**, sem inflar a coluna de cravadas.
-- A gestão de resultados foi corrigida para não depender de cache/localStorage antigo.
-- O site público só usa simulação local quando aberto com `?simulacao=1`.
-- A página `gestao-resultados.html` permite baixar ou copiar o `resultados.json` pronto para substituir no GitHub.
-- Teste end-to-end simula lançamento do jogo #97, exporta/importa `resultados.json` e confirma que o ranking após publicação bate com a prévia.
+- visual mais próximo do Base44;
+- mascotes oficiais do bolão no hero (`assets/mascotes-base44.png`);
+- bandeiras locais em SVG (`assets/flags/`), sem depender de CDN externa;
+- fonte interna compactada em 10px;
+- motor de cálculo preservado e testado;
+- recalculo automático no site público a partir de `data/resultados.json`;
+- rota separada de gestão local: `gestao-resultados.html`.
 
 ## Publicação
 
-Suba todo o conteúdo desta pasta na raiz do repositório do GitHub Pages. O arquivo `index.html` deve ficar na raiz.
+Suba todo o conteúdo deste pacote na raiz do repositório GitHub Pages.
+O arquivo `index.html` precisa ficar na raiz, junto de `app.js`, `admin.js`, `styles.css`, `data/`, `src/`, `assets/`, `scripts/` e `tests/`.
 
-## Gestão de resultados
+## Atualizar resultados
 
-A área de gestão não aparece no menu público. Acesse diretamente:
+1. Acesse `gestao-resultados.html`.
+2. Digite `GESTAO`.
+3. Lance placar, classificado e status dos jogos pendentes.
+4. Confira a prévia do ranking.
+5. Clique em **Ver site com esta simulação** para confirmar no site público do mesmo navegador.
+6. Clique em **Baixar resultados.json**.
+7. No GitHub, substitua exatamente o arquivo `data/resultados.json` pelo arquivo baixado.
+8. Faça commit.
+9. Abra o site em janela anônima ou use Ctrl+F5.
 
-`/gestao-resultados.html`
-
-Digite `GESTAO`, lance o resultado, confira a prévia, e use uma destas opções:
-
-1. **Baixar resultados.json**: baixe o arquivo e substitua `data/resultados.json` no GitHub.
-2. **Copiar JSON**: copie o conteúdo e cole diretamente no editor do arquivo `data/resultados.json` no GitHub.
-
-Depois de substituir o arquivo, clique em **Commit changes**. O site público recalcula tudo a partir do JSON publicado.
+A gestão também salva uma simulação local. Isso permite que o ranking do site público mude no seu navegador imediatamente, antes do commit no GitHub. Para ignorar a simulação local, abra `index.html?simulacao=0`.
 
 ## Testes
 
@@ -36,10 +36,12 @@ npm test
 npm run auditar
 ```
 
-Resultado esperado:
+Testes incluídos:
 
-- 58 participantes válidos.
-- 0 divergências de ranking na base publicada.
-- Placar exato no mata-mata = 3 pontos.
-- Cravadas = placares exatos de grupos.
-- Substituição de `resultados.json` validada por teste.
+- placar exato de grupos = 5 pontos;
+- vencedor/empate correto de grupos = 3 pontos;
+- placar exato no mata-mata = 3 pontos, não 5;
+- avanço no mata-mata;
+- soma do detalhe igual ao total;
+- fluxo de lançamento/exportação/importação do `resultados.json`;
+- cenário real solicitado: França 2 x 0 Marrocos e Espanha 2 x 1 Bélgica alteram o ranking.

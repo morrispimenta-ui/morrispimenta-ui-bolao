@@ -1,6 +1,6 @@
 import fs from 'fs';
 import assert from 'assert/strict';
-import { calculate, scoreGroup } from '../src/engine.js';
+import { calculate, scoreGroup, prepareResults } from '../src/engine.js';
 const read = name => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url),'utf8'));
 const data = {resultados:read('resultados'),participantes:read('participantes'),apostas_detalhes:read('apostas_detalhes'),regras:read('regras'),times:read('times')};
 
@@ -52,13 +52,19 @@ for(const r of result){
 // Fluxo de gestão: alterar resultados.json, recalcular e reabrir deve produzir o mesmo ranking.
 const editedResults = structuredClone(data.resultados);
 const g97 = editedResults.find(g=>g.game_id===97);
-g97.home='FRA'; g97.away='MAR'; g97.home_name='França'; g97.away_name='Marrocos'; g97.home_goals=2; g97.away_goals=1; g97.score='2x1'; g97.status='Finalizado'; g97.winner='FRA'; g97.advancer='FRA';
+g97.home='FRA'; g97.away='MAR'; g97.home_name='França'; g97.away_name='Marrocos'; g97.home_goals=2; g97.away_goals=0; g97.score='2x0'; g97.status='Finalizado'; g97.winner='FRA'; g97.advancer='FRA';
+const g99 = editedResults.find(g=>g.game_id===99);
+g99.home='ESP'; g99.away='BEL'; g99.home_name='Espanha'; g99.away_name='Bélgica'; g99.home_goals=2; g99.away_goals=1; g99.score='2x1'; g99.status='Finalizado'; g99.winner='ESP'; g99.advancer='ESP';
 const preview = calculate({...structuredClone(data), resultados: editedResults}).ranking;
-const exportedJson = JSON.stringify(editedResults,null,2);
+const exportedPrepared = prepareResults(editedResults, data.times);
+const exportedJson = JSON.stringify(exportedPrepared,null,2);
 const importedResults = JSON.parse(exportedJson);
 const afterPublish = calculate({...structuredClone(data), resultados: importedResults}).ranking;
 assert.deepEqual(afterPublish.map(r=>({id:r.entry_id,total:r.total,pos:r.posicao})), preview.map(r=>({id:r.entry_id,total:r.total,pos:r.posicao})), 'ranking após substituir resultados.json deve bater com prévia da gestão');
-assert.ok(preview.some((r,i)=>r.total !== result[i].total || r.posicao !== result[i].posicao), 'lançar jogo 97 deve alterar a prévia de pontuação/posição de alguém');
+assert.ok(preview.some((r,i)=>r.total !== result[i].total || r.posicao !== result[i].posicao), 'lançar França 2x0 Marrocos e Espanha 2x1 Bélgica deve alterar a prévia de pontuação/posição de alguém');
+assert.ok(preview[0].total > result[0].total, 'o líder deve ganhar pontos no cenário solicitado, provando cálculo automático');
+assert.equal(exportedPrepared.find(g=>g.game_id===97)?.home, 'FRA', 'exportação deve preservar/derivar França no jogo 97');
+assert.equal(exportedPrepared.find(g=>g.game_id===99)?.home, 'ESP', 'exportação deve preservar/derivar Espanha no jogo 99');
 
 // Fases exibidas: quartas só aparece como definida quando houver resultado.
 for(const ph of ['Fase de Grupos','Rodada de 32','Oitavas de Final']) assert.ok(data.resultados.some(g=>g.phase===ph && g.status!=='Pendente' && g.score), `fase ${ph} deve ter jogos finalizados para estatísticas`);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Gestão local de resultados · Bolão Copa 2026</title>
   <meta name="description" content="Área separada para lançamento local de resultados do Bolão Copa 2026." />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <style>
     body{padding:24px;background:linear-gradient(135deg,#eef9f1,#eff6ff 45%,#fff8dc)}
     .admin-shell{max-width:1280px;margin:0 auto;display:grid;gap:16px}
@@ -25,7 +25,7 @@
       <div class="hero-content">
         <span class="cup-badge">🔐 Rota separada · não aparece no menu público</span>
         <h2>Gestão local de resultados</h2>
-        <p>Use esta tela para lançar a sequência da Copa. Ao alterar placar, classificado ou chave futura, a prévia do ranking é recalculada imediatamente no navegador. A própria página pública também consegue abrir a simulação neste mesmo navegador. Para todo mundo ver igual, exporte o <b>resultados.json</b> e substitua <b>data/resultados.json</b> no GitHub.</p>
+        <p>Use esta tela para lançar a sequência da Copa. Ao alterar placar, classificado ou chave futura, a prévia do ranking é recalculada imediatamente no navegador. A própria página pública também consegue abrir a simulação neste mesmo navegador. Para todo mundo ver igual, exporte o <b>resultados.json</b> e substitua exatamente <b>data/resultados.json</b> no GitHub. Esta versão também salva uma simulação local automática: ao voltar ao site público neste navegador, o ranking deve mudar imediatamente.</p>
         <div class="hero-buttons"><a class="btn ghost" href="index.html">Voltar ao site público</a></div>
       </div>
     </section>
@@ -56,6 +56,6 @@
     </section>
   </main>
   <div id="toast" class="toast"></div>
-  <script type="module" src="admin.js"></script>
+  <script type="module" src="admin.js?v=8"></script>
 </body>
 </html>
