@@ -170,3 +170,44 @@
 .cravada-section.group{border-color:#bfdbfe;background:#fbfdff;}
 .exact-row.ko-exact{border-color:#fde68a;background:#fffaf0;}
 .exact-row.group-exact{border-color:#bfdbfe;background:#f8fbff;}
+
+/* V16 — correção do menu inferior no celular */
+@media (max-width: 760px){
+  .mobile-nav{
+    display:grid !important;
+    grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+    position:fixed !important;
+    left:8px !important;
+    right:8px !important;
+    bottom:calc(8px + env(safe-area-inset-bottom,0px)) !important;
+    min-height:64px !important;
+    height:auto !important;
+    z-index:9999 !important;
+    pointer-events:auto !important;
+    background:rgba(255,255,255,.98) !important;
+    backdrop-filter:blur(10px);
+  }
+  .mobile-nav button{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-width:0 !important;
+    min-height:58px !important;
+    padding:6px 2px !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+    border-radius:16px !important;
+  }
+  .mobile-nav button.active{
+    background:#ecfdf5 !important;
+    color:#0f8b5f !important;
+  }
+  .mobile-nav button span{
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .main{padding-bottom:112px !important;}
+}

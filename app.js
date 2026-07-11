@@ -277,7 +277,27 @@ function init(){
   bindNavigation(); bindModal(); renderHome(); renderRanking(); renderPalpites(); renderResults(); renderStats(); renderParticipantSelectors(); renderCompare(); renderSimulator(); renderRules();
   const initial = (location.hash || '#home').slice(1); if(titles[initial]) showPage(initial, false);
 }
-function bindNavigation(){ document.querySelectorAll('[data-page]').forEach(btn=> btn.addEventListener('click',()=>showPage(btn.dataset.page))); document.querySelectorAll('[data-go]').forEach(btn=> btn.addEventListener('click',()=>showPage(btn.dataset.go))); }
+
+function bindNavigation(){
+  // V16: navegação unificada por delegação. Isso corrige o menu inferior no celular,
+  // inclusive quando o toque acontece em cima do ícone/span dentro do botão.
+  const handleNav = (ev) => {
+    const trigger = ev.target.closest?.('[data-page],[data-go]');
+    if(!trigger) return;
+    const page = trigger.dataset.page || trigger.dataset.go;
+    if(!page) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    showPage(page);
+  };
+  document.addEventListener('click', handleNav, true);
+  document.addEventListener('touchend', (ev) => {
+    const trigger = ev.target.closest?.('.mobile-nav [data-page], .mobile-nav [data-go]');
+    if(!trigger) return;
+    handleNav(ev);
+  }, {capture:true, passive:false});
+}
+
 function showPage(page, updateHash=true){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); $(`page-${page}`)?.classList.add('active'); document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active', b.dataset.page===page)); $('pageTitle').textContent = titles[page] || 'Bolão'; if(updateHash) history.replaceState(null,'',`#${page}`); window.scrollTo({top:0, behavior:'smooth'}); }
 function bindModal(){ $('modalClose').onclick = ()=> $('participantModal').close(); $('participantModal').addEventListener('click', e=>{ if(e.target.id==='participantModal') e.target.close(); }); }
 
@@ -683,7 +703,7 @@ function renderSimulator(){
   const scorerOptions = uniqueScorers(DATA.participantes || []);
   const scorerSelect = $('simScorer');
   if(scorerSelect){
-    scorerSelect.innerHTML = `<option value="">Escolha o artilheiro...</option>` + scorerOptions.map(s=>`<option value="${esc(s.name)}">${esc(s.name)} · ${s.count} aposta${s.count===1?'':'s'}</option>`).join('');
+    scorerSelect.innerHTML = `<option value="">Escolha o artilheiro...</option>` + scorerOptions.map(s=>`<option value="${esc(s.name)}">${esc(s.name)} · ${s.count ? `${s.count} aposta${s.count===1?'':'s'}` : 'opção de simulação'}</option>`).join('');
     scorerSelect.value = SIM_SCORER || '';
     scorerSelect.onchange = e=>{ SIM_SCORER = e.target.value || ''; updateSimulator(); };
   }
@@ -812,7 +832,7 @@ function renderSimFinals(sim){
     return `<div class="sim-final-line"><span>${label}</span><b>${code?team(code,true):'A definir'}</b><small>${names.length} aposta${names.length===1?'':'s'} nessa posição</small></div>`;
   }).join('');
   const scorer = uniqueScorers(DATA.participantes || []).find(x=>x.name===SIM_SCORER);
-  $('simScorerHint').textContent = SIM_SCORER ? `${scorer?.count || 0} participante${(scorer?.count||0)===1?'':'s'} apostaram em ${SIM_SCORER}.` : 'Escolha um nome da lista de artilheiros apostados.';
+  $('simScorerHint').textContent = SIM_SCORER ? (scorer?.count ? `${scorer.count} participante${scorer.count===1?'':'s'} apostaram em ${SIM_SCORER}.` : `${SIM_SCORER} foi incluído como opção de simulação; se ninguém apostou nele, não gera bônus para participantes.`) : 'Escolha um nome da lista de artilheiros apostados ou opções adicionais.';
 }
 function clearSimulation(){
   SIM_CHOICES = {}; SIM_SCORER = '';

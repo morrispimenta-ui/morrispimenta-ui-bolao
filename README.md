@@ -1,23 +1,16 @@
-# Bolão Copa 2026 — Atualização V14
+# Bolão Copa 2026 — V16
 
-Versão pública para GitHub Pages com:
+Versão pública para GitHub Pages.
 
-- Estatísticas separando cravadas de grupos, cravadas de mata-mata e cravadas totais estatísticas.
-- Placar exato no mata-mata preservado como bônus de 3 pontos, sem alterar o ranking oficial.
-- Aba Palpites reorganizada em cards expansíveis por apostador, com detalhes por fase apenas ao clicar.
-- Sumário final do apostador com campeão, vice, terceiro, quarto e artilheiro.
-- Simulador preservado como funcionalidade recreativa/local, sem alterar resultados oficiais.
+## Ajustes V16
+
+- Corrige o menu inferior da versão mobile com navegação por delegação de evento e grid de 6 itens.
+- Adiciona Lionel Messi como opção extra no simulador de artilheiro, sem alterar apostas reais nem pontuação oficial.
+- Mantém o motor oficial de cálculo sem alteração.
+- Mantém o placar exato no mata-mata como bônus de 3 pontos.
 
 ## Publicação
 
-Suba todo o conteúdo deste pacote na raiz do repositório GitHub Pages, substituindo os arquivos atuais.
-O arquivo `index.html` deve ficar na raiz do repositório.
+Suba todo o conteúdo desta pasta na raiz do repositório do GitHub Pages.
 
-## Testes executados
-
-```bash
-npm test
-npm run auditar
-```
-
-Resultado esperado: 58 participantes, 0 divergências de ranking e placar exato do mata-mata valendo 3 pontos.
+O arquivo `index.html` deve ficar na raiz.

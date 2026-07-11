@@ -124,6 +124,12 @@ export function uniqueScorers(participantes=[]){
     m[name] ||= [];
     m[name].push(p.display_name || p.name);
   }
+  // V16: lista complementar para o simulador. Não altera apostas nem pontuação oficial;
+  // apenas permite simular artilheiros relevantes da Copa mesmo que ninguém tenha apostado neles.
+  const extras = ['Lionel Messi'];
+  for(const name of extras){
+    m[name] ||= [];
+  }
   return Object.entries(m).map(([name, participants]) => ({ name, count: participants.length, participants: participants.sort((a,b)=>a.localeCompare(b,'pt-BR')) }))
     .sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name,'pt-BR'));
 }
