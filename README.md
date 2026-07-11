@@ -1,32 +1,36 @@
-# Bolão Copa 2026 — GitHub Pages V12
+# Bolão Copa 2026 · Valencia / Legion / PPK — V13
 
-Versão pública de conferência do Bolão Copa 2026, com visual inspirado no Base44 e telas mais leves para os participantes.
+Versão pública para GitHub Pages com visual limpo, conferência auditável e nova aba **Simulador**.
 
-## O que mudou na V12
+## O que há nesta versão
 
-- Retirada da tela pública de mensagens administrativas/técnicas.
-- Página inicial ficou mais amigável para apostadores, mantendo apenas data/hora da última atualização.
-- Ranking e Palpites seguem em cards expansíveis: o essencial aparece primeiro e o detalhe abre sob demanda.
-- Estatísticas seguem organizadas nas seções Geral do Bolão, Análise de Jogos, Highlights e Palpites Finais.
-- Mantido o cálculo validado, sem alteração regressiva de pontuação.
+- Ranking oficial preservado.
+- Palpites e conferência em cards expansíveis.
+- Resultados oficiais somente leitura.
+- Estatísticas em seções no padrão Base44.
+- Gestão de resultados em rota separada (`gestao-resultados.html`), fora do menu público.
+- Nova aba pública **Simulador**:
+  - simula apenas confrontos pendentes;
+  - mostra ranking simulado no topo;
+  - monta chave à esquerda;
+  - mostra campeão, vice, terceiro, quarto e artilheiro à direita;
+  - não altera `data/resultados.json`;
+  - não altera ranking oficial;
+  - funciona apenas na sessão do usuário.
 
-## Como publicar
+## Publicação no GitHub Pages
 
-Suba todo o conteúdo desta pasta na raiz do repositório GitHub Pages. O arquivo `index.html` deve ficar na raiz.
+Suba todo o conteúdo desta pasta na raiz do repositório. O arquivo `index.html` deve ficar na raiz.
 
-## Como atualizar resultados
+## Atualização oficial dos resultados
 
-A área de lançamento continua disponível em `gestao-resultados.html`, fora do menu público. Depois de exportar o novo `resultados.json`, substitua o arquivo `data/resultados.json` no repositório.
+A página pública usa apenas `data/resultados.json` como fonte oficial. A área de gestão gera novo JSON para substituição manual desse arquivo no GitHub.
 
-## Testes executados
+## Testes
 
 ```bash
 npm test
 npm run auditar
 ```
 
-Resultado na base atual:
-
-- 58 participantes válidos.
-- 0 divergências de ranking após auditoria.
-- Placar exato no mata-mata permanece valendo 3 pontos.
+Os testes incluem regras oficiais, regressão do ranking e isolamento do simulador.

@@ -72,3 +72,28 @@ for(const ph of ['Fase de Grupos','Rodada de 32','Oitavas de Final']) assert.ok(
 assert.ok(resultadosArray.some(g=>g.phase==='Quartas de Final' && g.status!=='Pendente' && g.score), 'quartas deve aparecer como fase definida quando #97/#98 estão publicados');
 
 console.log('Todos os testes passaram. Motor recalculado, cravadas auditadas e fluxo resultados.json validado.');
+
+// Simulador: deve trabalhar apenas em cópia temporária, sem alterar ranking oficial nem resultados oficiais.
+import { computeSimulation, buildSimulatedResults, getFinalPodium } from '../src/simulator.js';
+const officialBefore = result.map(r=>({id:r.entry_id,total:r.total,pos:r.posicao}));
+const officialResultsBefore = JSON.stringify(resultadosArray);
+const simChoices = {
+  99:{home_goals:1,away_goals:2,advancer:'ENG'},
+  100:{home_goals:2,away_goals:0,advancer:'ARG'},
+  101:{home_goals:2,away_goals:1,advancer:'FRA'},
+  102:{home_goals:1,away_goals:3,advancer:'ARG'},
+  103:{home_goals:2,away_goals:0,advancer:'ESP'},
+  104:{home_goals:2,away_goals:1,advancer:'FRA'}
+};
+const simulated = computeSimulation(structuredClone(data), result, simChoices, 'Kylian Mbappé');
+assert.deepEqual(result.map(r=>({id:r.entry_id,total:r.total,pos:r.posicao})), officialBefore, 'simulador não pode alterar o ranking oficial em memória');
+assert.equal(JSON.stringify(resultadosArray), officialResultsBefore, 'simulador não pode alterar os resultados oficiais em memória');
+assert.notDeepEqual(simulated.ranking.map(r=>({id:r.entry_id,total:r.total_simulado,pos:r.posicao_simulada})), officialBefore, 'ranking simulado precisa ser independente e mudar conforme cenário');
+const podium = getFinalPodium(simulated.resultados);
+assert.deepEqual(podium, {campeao:'FRA', vice:'ARG', terceiro:'ESP', quarto:'ENG'}, 'campeão/vice/3º/4º devem ser derivados automaticamente da chave simulada');
+const withBonus = simulated.ranking.find(r => r.bonus_final_simulado > 0);
+assert.ok(withBonus, 'ao simular finais e artilheiro, pelo menos um participante deve receber bônus potencial');
+assert.ok(simulated.ranking.every(r => Number.isFinite(r.total_simulado) && Number.isFinite(r.diferenca_pontos)), 'ranking simulado deve ter totais e variações numéricas válidas');
+const simResults = buildSimulatedResults(data.resultados, data.times, simChoices);
+assert.equal(simResults.find(g=>g.game_id===99).status, 'Simulado', 'jogo pendente deve poder virar simulado');
+assert.equal(simResults.find(g=>g.game_id===97).status, 'Finalizado', 'jogo oficial já finalizado não pode ser sobrescrito pela simulação');

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bolão Copa 2026 · Valencia / Legion / PPK</title>
   <meta name="description" content="Bolão atualizado, automática e auditável do Bolão Copa 2026." />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
 </head>
 <body>
   <div class="app-shell">
@@ -22,6 +22,7 @@
         <button data-page="ranking">🏅 <span>Ranking</span></button>
         <button data-page="palpites">📝 <span>Palpites</span></button>
         <button data-page="resultados">⚽ <span>Resultados</span></button>
+        <button data-page="simulador">🎮 <span>Simulador</span></button>
         <button data-page="estatisticas">📊 <span>Estatísticas</span></button>
         <button data-page="conferencia">🔎 <span>Conferência</span></button>
         <button data-page="comparar">⚖️ <span>Comparar</span></button>
@@ -182,6 +183,56 @@
         </section>
       </section>
 
+
+      <section class="page" id="page-simulador">
+        <section class="stats-title simulator-title">
+          <div>
+            <h2>🎮 Simulador</h2>
+            <p>Escolha os vencedores dos confrontos pendentes e veja como o bolão pode mudar. É só uma brincadeira: o ranking oficial continua separado.</p>
+          </div>
+          <span class="mini-label">simulação recreativa</span>
+        </section>
+
+        <section class="panel full sim-awards-panel">
+          <div class="panel-head wrap">
+            <div>
+              <h3>🏆 Classificação simulada do bolão</h3>
+              <p>O topo mostra quem ficaria na zona de premiação neste cenário. Abra o participante para entender os pontos potenciais.</p>
+            </div>
+            <div class="sim-actions">
+              <button class="btn tiny" id="simRecalc">Recalcular simulação</button>
+              <button class="btn tiny ghost" id="simCopy">Copiar cenário</button>
+              <button class="btn tiny danger" id="simClear">Limpar simulação</button>
+            </div>
+          </div>
+          <div id="simStatus" class="sim-status-box">Escolha os vencedores dos confrontos pendentes para ver como o bolão pode mudar.</div>
+          <div id="simRanking" class="sim-ranking"></div>
+        </section>
+
+        <div class="sim-layout">
+          <section class="panel sim-bracket-panel">
+            <div class="panel-head">
+              <h3>⚔️ Chave simulável</h3>
+              <span class="mini-label">jogos oficiais ficam bloqueados</span>
+            </div>
+            <div id="simBracket" class="sim-bracket"></div>
+          </section>
+
+          <aside class="panel sim-finals-panel">
+            <div class="panel-head">
+              <h3>🥇 Final simulada</h3>
+              <span class="mini-label">derivada da chave</span>
+            </div>
+            <div id="simFinals" class="sim-finals"></div>
+            <div class="sim-scorer-box">
+              <label for="simScorer"><strong>🌟 Artilheiro simulado</strong></label>
+              <select id="simScorer" class="select wide"></select>
+              <small id="simScorerHint">Escolha um nome da lista de artilheiros apostados.</small>
+            </div>
+          </aside>
+        </div>
+      </section>
+
       <section class="page" id="page-regras">
         <section class="panel full rules-panel">
           <div class="panel-head"><h3>Regras de pontuação</h3><span class="mini-label">como funciona</span></div>
@@ -197,6 +248,7 @@
     <button data-page="palpites">📝<span>Palpites</span></button>
     <button data-page="resultados">⚽<span>Jogos</span></button>
     <button data-page="estatisticas">📊<span>Stats</span></button>
+    <button data-page="simulador">🎮<span>Sim</span></button>
   </nav>
 
   <dialog id="participantModal" class="modal">
@@ -208,6 +260,6 @@
   </dialog>
 
   <div id="toast" class="toast">Carregando...</div>
-  <script type="module" src="app.js?v=12"></script>
+  <script type="module" src="app.js?v=13"></script>
 </body>
 </html>

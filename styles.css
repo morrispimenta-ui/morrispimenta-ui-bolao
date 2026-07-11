@@ -86,3 +86,46 @@
 
 @media(max-width:980px){.rank-card-base44>summary{grid-template-columns:48px 1fr 80px;gap:10px}.rank-metric:nth-of-type(2),.rank-champ{grid-column:2/-1;text-align:left;justify-content:flex-start}.rank-composition{grid-template-columns:1fr}.palpite-line-card>summary{grid-template-columns:1fr 72px;gap:8px}.palpite-match,.palpite-status-compact,.palpite-line-card>summary>.expand-hint{grid-column:1/-1}.palpite-detail-clean{grid-template-columns:1fr}.phase-columns{grid-template-columns:1fr}}
 @media(max-width:760px){.rank-card-base44>summary{padding:12px;grid-template-columns:42px 1fr 68px}.rank-main strong{font-size:12px!important}.rank-metric.points b{font-size:18px!important}.rank-composition{padding:10px}.palpite-line-card>summary{padding:12px}.palpite-detail-clean{padding:10px}.panel-head.wrap{gap:10px}.filters-grid{gap:8px}}
+
+/* Simulador V13 */
+.simulator-title{margin-bottom:12px}
+.sim-awards-panel{position:relative;overflow:hidden}
+.sim-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn.danger{background:#fff2f2;border-color:#fecaca;color:#991b1b}
+.sim-status-box{margin:10px 0 16px;padding:12px 14px;border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;color:#1e3a8a;font-weight:700;font-size:13px}
+.sim-ranking{display:grid;gap:10px;max-height:520px;overflow:auto;padding-right:4px}
+.sim-rank-card{border:1px solid #e5e7eb;border-radius:18px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
+.sim-rank-card summary{display:grid;grid-template-columns:54px minmax(210px,1.5fr) 90px 82px minmax(150px,1fr);align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none}
+.sim-rank-card summary::-webkit-details-marker{display:none}
+.sim-rank-card[open]{border-color:#bfdbfe;box-shadow:0 12px 28px rgba(37,99,235,.12)}
+.sim-rank-card.sim-prize{background:linear-gradient(90deg,#fff7ed,#fff)}
+.sim-pos{display:grid;place-items:center;width:38px;height:38px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:900;color:#0f172a}
+.sim-player strong{display:block;color:#0f172a;font-size:14px}
+.sim-player small,.sim-finals-mini small{display:block;color:#64748b;font-size:11px;line-height:1.35}
+.sim-delta{text-align:center;border-radius:14px;background:#f8fafc;padding:8px 6px;border:1px solid #edf2f7}
+.sim-delta b{display:block;font-size:15px}.sim-delta small{font-size:10px;color:#64748b}
+.move-up{color:#059669!important}.move-down{color:#dc2626!important}.muted{color:#94a3b8!important}
+.sim-rank-detail{border-top:1px solid #e5e7eb;background:#f8fafc;padding:14px 16px;display:grid;gap:12px}
+.sim-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.sim-detail-grid div{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:10px}
+.sim-detail-grid span,.sim-bonus-lines span{display:block;color:#64748b;font-size:11px}.sim-detail-grid b{font-size:16px;color:#0f172a}
+.sim-bonus-lines{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.sim-bonus-lines div{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:9px;min-width:0}
+.sim-bonus-lines b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f172a}.sim-bonus-lines em{font-style:normal;color:#f97316;font-weight:800;font-size:12px}
+.sim-layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(320px,.85fr);gap:18px;align-items:start;margin-top:18px}
+.sim-finals-panel{position:sticky;top:16px}
+.sim-bracket{display:grid;gap:16px}.sim-phase{display:grid;gap:10px}.sim-phase h4{margin:0;color:#0f172a;font-size:15px}
+.sim-game-card{border:1px solid #e5e7eb;border-radius:18px;background:white;box-shadow:0 6px 18px rgba(15,23,42,.05);padding:13px;display:grid;gap:10px}
+.sim-game-card.oficial{background:#f8fafc}.sim-game-card.simulado{border-color:#fed7aa;background:#fff7ed}.sim-game-card.pendente{border-color:#dbeafe}
+.sim-game-top{display:flex;align-items:center;gap:8px;justify-content:space-between}.sim-game-top b{font-size:12px;color:#334155;margin-right:auto}.match-no{font-size:11px;color:#64748b;font-weight:800}
+.pill.neutral{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+.sim-match-row{display:grid;grid-template-columns:minmax(120px,1fr) 54px 12px 54px minmax(120px,1fr);gap:8px;align-items:center}
+.sim-match-row input{width:100%;height:36px;text-align:center;border:1px solid #cbd5e1;border-radius:12px;font-weight:900;color:#0f172a;background:white}.sim-match-row input:disabled{background:#f1f5f9;color:#94a3b8}
+.sim-advancer{display:inline-flex;justify-self:start;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:12px;font-weight:800}
+.sim-choice-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sim-choice-row .btn{min-height:34px;white-space:normal}.sim-choice-row .btn:disabled{opacity:.5;cursor:not-allowed}
+.sim-finals{display:grid;gap:10px}.sim-final-line{border:1px solid #e5e7eb;border-radius:16px;padding:12px;background:#fff;display:grid;gap:4px}.sim-final-line span{font-size:12px;color:#64748b;font-weight:800}.sim-final-line b{font-size:15px;color:#0f172a}.sim-final-line small{font-size:11px;color:#64748b}
+.sim-scorer-box{margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb;display:grid;gap:8px}.sim-scorer-box small{color:#64748b;font-size:11px;line-height:1.4}
+.side-nav .menu button[data-page="simulador"]{border-color:rgba(249,115,22,.35)}
+.side-nav .menu button[data-page="simulador"].active{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+@media (max-width:1100px){.sim-layout{grid-template-columns:1fr}.sim-finals-panel{position:static}.sim-rank-card summary{grid-template-columns:46px 1fr 76px 68px}.sim-finals-mini{display:none}.sim-detail-grid,.sim-bonus-lines{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.sim-actions{justify-content:flex-start}.sim-rank-card summary{grid-template-columns:42px 1fr 70px;gap:8px}.sim-rank-card summary .sim-delta:nth-of-type(2),.sim-finals-mini{display:none}.sim-match-row{grid-template-columns:1fr 42px 10px 42px 1fr}.sim-choice-row{grid-template-columns:1fr}.sim-detail-grid,.sim-bonus-lines{grid-template-columns:1fr}.mobile-nav{grid-template-columns:repeat(6,1fr)}}

@@ -1,4 +1,5 @@
 import { calculate, isPlayed, phaseKey } from './src/engine.js';
+import { computeSimulation, uniqueScorers, summarizeScenario, isEditableGame } from './src/simulator.js';
 
 const files = ['regras','times','resultados','participantes','apostas_detalhes','ranking','estatisticas'];
 const CACHE_BUST = Date.now();
@@ -10,13 +11,16 @@ const CLEAR_LOCAL_SIMULATION = SIM_PARAM === 'limpar';
 let usingLocalResults = false;
 let resultsSource = 'data/resultados.json';
 let resultsMeta = {};
-const titles = {home:'Início', ranking:'Ranking Geral', palpites:'Palpites', resultados:'Resultados', estatisticas:'Estatísticas', conferencia:'Conferência Individual', comparar:'Comparar', regras:'Regras'};
+const titles = {home:'Início', ranking:'Ranking Geral', palpites:'Palpites', resultados:'Resultados', estatisticas:'Estatísticas', conferencia:'Conferência Individual', comparar:'Comparar', simulador:'Simulador', regras:'Regras'};
 const allPhases = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
 const phaseLabels = {'Rodada de 32':'1/16 avos','Oitavas de Final':'Oitavas','Quartas de Final':'Quartas','Semifinais':'Semifinal','3º Lugar':'3º lugar','Fase de Grupos':'Fase de grupos'};
 const koPhases = ['Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','Final'];
 const TEAM_ISO = {ALG:'dz',ARG:'ar',AUS:'au',AUT:'at',BEL:'be',BIH:'ba',BRA:'br',CAN:'ca',CIV:'ci',COD:'cd',COL:'co',CPV:'cv',CRO:'hr',CUW:'cw',CZE:'cz',ECU:'ec',EGY:'eg',ENG:'gb-eng',ESP:'es',FRA:'fr',GER:'de',GHA:'gh',HAI:'ht',IRN:'ir',IRQ:'iq',JOR:'jo',JPN:'jp',KOR:'kr',KSA:'sa',MAR:'ma',MEX:'mx',NED:'nl',NOR:'no',NZL:'nz',PAN:'pa',PAR:'py',POR:'pt',QAT:'qa',SCO:'gb-sct',SEN:'sn',SUI:'ch',SWE:'se',TUN:'tn',TUR:'tr',URU:'uy',USA:'us',UZB:'uz',ZAF:'za'};
 
 let DATA = {}, CALC = {}, teamMap = {}, gamesById = {}, detailsByEntry = {}, currentDetailTab = 'resumo';
+let SIM_CHOICES = {};
+let SIM_SCORER = '';
+let SIM_CALC = null;
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('pt-BR');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -160,7 +164,7 @@ function participantsOptions(){ return '<option value="">Selecione...</option>' 
 
 function init(){
   $('lastUpdate').textContent = `Atualizado em ${lastUpdated()}`;
-  bindNavigation(); bindModal(); renderHome(); renderRanking(); renderPalpites(); renderResults(); renderStats(); renderParticipantSelectors(); renderCompare(); renderRules();
+  bindNavigation(); bindModal(); renderHome(); renderRanking(); renderPalpites(); renderResults(); renderStats(); renderParticipantSelectors(); renderCompare(); renderSimulator(); renderRules();
   const initial = (location.hash || '#home').slice(1); if(titles[initial]) showPage(initial, false);
 }
 function bindNavigation(){ document.querySelectorAll('[data-page]').forEach(btn=> btn.addEventListener('click',()=>showPage(btn.dataset.page))); document.querySelectorAll('[data-go]').forEach(btn=> btn.addEventListener('click',()=>showPage(btn.dataset.go))); }
@@ -486,6 +490,168 @@ function renderEvolution(){
 }
 
 function renderCompare(){ const options=participantsOptions(); $('compareA').innerHTML=options; $('compareB').innerHTML=options; const draw=()=>{ const a=Number($('compareA').value), b=Number($('compareB').value); if(!a||!b){ $('compareResult').className='compare-grid empty-state'; $('compareResult').textContent='Selecione dois participantes.'; return; } $('compareResult').className='compare-grid'; const A=CALC.ranking.find(x=>x.entry_id===a), B=CALC.ranking.find(x=>x.entry_id===b); $('compareResult').innerHTML = [A,B].map(r=>`<article class="compare-card"><h4>${esc(r.display_name)}</h4><div class="big-score">${r.total}</div><p>${r.posicao}º lugar</p><div class="stat-line"><span>Grupos</span><b>${r.grupos}</b></div><div class="stat-line"><span>Mata-mata</span><b>${r.mata_mata}</b></div><div class="stat-line"><span>Classificados</span><b>${r.classificados}</b></div><div class="stat-line"><span>Cravadas</span><b>${r.cravadas}</b></div><button class="btn tiny" data-open-entry="${r.entry_id}">Explodir detalhes</button></article>`).join(''); bindOpeners(); }; $('compareA').addEventListener('change',draw); $('compareB').addEventListener('change',draw); draw(); }
+
+function gameByIdFrom(results, id){ return (results||[]).find(g=>Number(g.game_id)===Number(id)); }
+function simOfficialById(){ return Object.fromEntries(CALC.ranking.map(r=>[r.entry_id,r])); }
+function simPhaseIds(){ return [97,98,99,100,101,102,103,104]; }
+function simChoiceKey(gameId){ return String(gameId); }
+function simHasAnyChoice(){ return Object.keys(SIM_CHOICES||{}).length>0 || !!SIM_SCORER; }
+function simIsComplete(){
+  if(!SIM_CALC) return false;
+  const ids=[99,100,101,102,103,104];
+  return ids.every(id=>{ const g=gameByIdFrom(SIM_CALC.resultados,id); return isPlayed(g); }) && !!SIM_SCORER;
+}
+function computeCurrentSimulation(){
+  SIM_CALC = computeSimulation(DATA, CALC.ranking, SIM_CHOICES, SIM_SCORER || null);
+  return SIM_CALC;
+}
+function renderSimulator(){
+  const scorerOptions = uniqueScorers(DATA.participantes || []);
+  const scorerSelect = $('simScorer');
+  if(scorerSelect){
+    scorerSelect.innerHTML = `<option value="">Escolha o artilheiro...</option>` + scorerOptions.map(s=>`<option value="${esc(s.name)}">${esc(s.name)} · ${s.count} aposta${s.count===1?'':'s'}</option>`).join('');
+    scorerSelect.value = SIM_SCORER || '';
+    scorerSelect.onchange = e=>{ SIM_SCORER = e.target.value || ''; updateSimulator(); };
+  }
+  $('simRecalc')?.addEventListener('click', updateSimulator);
+  $('simClear')?.addEventListener('click', clearSimulation);
+  $('simCopy')?.addEventListener('click', copySimulationScenario);
+  updateSimulator();
+}
+function updateSimulator(){
+  const sim = computeCurrentSimulation();
+  renderSimStatus();
+  renderSimRanking(sim);
+  renderSimBracket(sim);
+  renderSimFinals(sim);
+}
+function renderSimStatus(){
+  const box = $('simStatus'); if(!box) return;
+  if(!simHasAnyChoice()) box.textContent = 'Escolha os vencedores dos confrontos pendentes para ver como o bolão pode mudar.';
+  else if(!simIsComplete()) box.textContent = 'Complete os confrontos pendentes para projetar campeão, vice, terceiro e quarto.';
+  else box.textContent = 'Cenário completo simulado. Esta projeção não altera o ranking oficial.';
+}
+function renderSimRanking(sim){
+  const container = $('simRanking'); if(!container || !sim) return;
+  const officialLast = CALC.ranking[CALC.ranking.length-1];
+  const prizeIds = new Set(sim.ranking.slice(0,3).map(r=>r.entry_id));
+  if(officialLast) prizeIds.add(officialLast.entry_id);
+  container.innerHTML = sim.ranking.map((r,i)=>{
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':(officialLast && r.entry_id===officialLast.entry_id?'🎁':`${i+1}º`);
+    const mov = Number(r.variacao_posicao||0);
+    const movLabel = mov>0 ? `▲ ${mov}` : mov<0 ? `▼ ${Math.abs(mov)}` : '—';
+    const movCls = mov>0?'move-up':mov<0?'move-down':'muted';
+    const diff = Number(r.diferenca_pontos||0);
+    const diffLabel = `${diff>=0?'+':''}${diff}`;
+    const finals = r.finals || {};
+    return `<details class="sim-rank-card ${prizeIds.has(r.entry_id)?'sim-prize':''}">
+      <summary>
+        <div class="sim-pos">${medal}</div>
+        <div class="sim-player"><strong>${esc(r.display_name)}</strong><small>Oficial: ${r.total_oficial} pts · Simulado: ${r.total_simulado} pts</small></div>
+        <div class="sim-delta ${diff>0?'move-up':diff<0?'move-down':'muted'}"><b>${diffLabel}</b><small>pontos</small></div>
+        <div class="sim-delta ${movCls}"><b>${movLabel}</b><small>posição</small></div>
+        <div class="sim-finals-mini"><small>${esc(safe(finals.campeao))} · ${esc(safe(finals.artilheiro))}</small></div>
+      </summary>
+      <div class="sim-rank-detail">
+        <div class="sim-detail-grid">
+          <div><span>Pontos oficiais já conquistados</span><b>${r.total_oficial}</b></div>
+          <div><span>Pontos que entrariam nesta simulação</span><b>${diffLabel}</b></div>
+          <div><span>Bônus final possível</span><b>${r.bonus_final_simulado || 0}</b></div>
+          <div><span>Total simulado</span><b>${r.total_simulado}</b></div>
+        </div>
+        <div class="sim-bonus-lines">
+          <div><span>Campeão apostado</span><b>${esc(safe(finals.campeao))}</b><em>${r.bonus_final_detalhe?.campeao||0} pts</em></div>
+          <div><span>Vice apostado</span><b>${esc(safe(finals.vice))}</b><em>${r.bonus_final_detalhe?.vice||0} pts</em></div>
+          <div><span>3º lugar apostado</span><b>${esc(safe(finals.terceiro))}</b><em>${r.bonus_final_detalhe?.terceiro||0} pts</em></div>
+          <div><span>4º lugar apostado</span><b>${esc(safe(finals.quarto))}</b><em>${r.bonus_final_detalhe?.quarto||0} pts</em></div>
+          <div><span>Artilheiro apostado</span><b>${esc(safe(finals.artilheiro))}</b><em>${r.bonus_final_detalhe?.artilheiro||0} pts</em></div>
+        </div>
+        <button class="btn tiny" data-open-entry="${r.entry_id}">Ver detalhes do participante</button>
+      </div>
+    </details>`;
+  }).join('');
+  bindOpeners();
+}
+function renderSimBracket(sim){
+  const box = $('simBracket'); if(!box || !sim) return;
+  const phaseGroups = [
+    ['Quartas de final',[97,98,99,100]],
+    ['Semifinais',[101,102]],
+    ['Disputa de 3º lugar',[103]],
+    ['Final',[104]]
+  ];
+  box.innerHTML = phaseGroups.map(([title, ids])=>`<section class="sim-phase"><h4>${esc(title)}</h4>${ids.map(id=>simGameCard(gameByIdFrom(sim.resultados,id))).join('')}</section>`).join('');
+  box.querySelectorAll('[data-sim-winner]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const gameId=btn.dataset.gameId, adv=btn.dataset.simWinner;
+      const card=btn.closest('.sim-game-card');
+      const hg=card?.querySelector('[data-sim-home]')?.value;
+      const ag=card?.querySelector('[data-sim-away]')?.value;
+      SIM_CHOICES[simChoiceKey(gameId)] = { home_goals:hg, away_goals:ag, advancer:adv };
+      updateSimulator();
+    };
+  });
+  box.querySelectorAll('[data-sim-home],[data-sim-away]').forEach(inp=>{
+    inp.onchange = ()=>{
+      const card=inp.closest('.sim-game-card'), gameId=card?.dataset.gameId;
+      if(!gameId) return;
+      const g=gameByIdFrom(SIM_CALC?.resultados,gameId);
+      const current = SIM_CHOICES[simChoiceKey(gameId)] || {};
+      const hg=card.querySelector('[data-sim-home]')?.value;
+      const ag=card.querySelector('[data-sim-away]')?.value;
+      let adv=current.advancer;
+      if(hg!=='' && ag!=='' && Number(hg)!==Number(ag) && g?.home && g?.away) adv = Number(hg)>Number(ag) ? g.home : g.away;
+      if(adv) SIM_CHOICES[simChoiceKey(gameId)] = { home_goals:hg, away_goals:ag, advancer:adv };
+      updateSimulator();
+    };
+  });
+}
+function simGameCard(g){
+  if(!g) return `<article class="sim-game-card empty-state">Jogo não encontrado</article>`;
+  const official = isPlayed(g) && !g.simulated;
+  const simulated = isPlayed(g) && !!g.simulated;
+  const pending = !isPlayed(g);
+  const choice = SIM_CHOICES[simChoiceKey(g.game_id)] || {};
+  const status = official ? 'oficial' : simulated ? 'simulado' : 'pendente';
+  const canEdit = !official && g.home && g.away;
+  return `<article class="sim-game-card ${status}" data-game-id="${g.game_id}">
+    <div class="sim-game-top"><span class="match-no">#${g.game_id}</span><b>${phaseLabel(g.phase)}</b><span class="pill ${official?'good':simulated?'warn':'neutral'}">${status}</span></div>
+    <div class="sim-match-row"><div>${team(g.home,true)}</div><input ${canEdit?'':'disabled'} data-sim-home type="number" min="0" value="${esc(choice.home_goals ?? (isPlayed(g)?g.home_goals:''))}" aria-label="gols mandante"/><span>x</span><input ${canEdit?'':'disabled'} data-sim-away type="number" min="0" value="${esc(choice.away_goals ?? (isPlayed(g)?g.away_goals:''))}" aria-label="gols visitante"/><div>${team(g.away,true)}</div></div>
+    ${g.advancer ? `<div class="sim-advancer">avança ${team(g.advancer,true)}</div>` : ''}
+    <div class="sim-choice-row">
+      <button class="btn tiny ${g.advancer===g.home?'primary':''}" ${canEdit?'':'disabled'} data-game-id="${g.game_id}" data-sim-winner="${esc(g.home||'')}">${g.home?`Avança ${teamName(g.home)}`:'A definir'}</button>
+      <button class="btn tiny ${g.advancer===g.away?'primary':''}" ${canEdit?'':'disabled'} data-game-id="${g.game_id}" data-sim-winner="${esc(g.away||'')}">${g.away?`Avança ${teamName(g.away)}`:'A definir'}</button>
+    </div>
+  </article>`;
+}
+function renderSimFinals(sim){
+  const box = $('simFinals'); if(!box || !sim) return;
+  const pos = [
+    ['🥇 Campeão','campeao'],['🥈 Vice','vice'],['🥉 Terceiro','terceiro'],['4️⃣ Quarto','quarto']
+  ];
+  const finalMaps = {
+    campeao: finalPositionMap('campeao'), vice: finalPositionMap('vice'), terceiro: finalPositionMap('terceiro'), quarto: finalPositionMap('quarto')
+  };
+  box.innerHTML = pos.map(([label,key])=>{
+    const code = sim.podium?.[key];
+    const names = code ? (finalMaps[key]?.[code] || []) : [];
+    return `<div class="sim-final-line"><span>${label}</span><b>${code?team(code,true):'A definir'}</b><small>${names.length} aposta${names.length===1?'':'s'} nessa posição</small></div>`;
+  }).join('');
+  const scorer = uniqueScorers(DATA.participantes || []).find(x=>x.name===SIM_SCORER);
+  $('simScorerHint').textContent = SIM_SCORER ? `${scorer?.count || 0} participante${(scorer?.count||0)===1?'':'s'} apostaram em ${SIM_SCORER}.` : 'Escolha um nome da lista de artilheiros apostados.';
+}
+function clearSimulation(){
+  SIM_CHOICES = {}; SIM_SCORER = '';
+  if($('simScorer')) $('simScorer').value='';
+  updateSimulator();
+  toast('Simulação limpa.');
+}
+function copySimulationScenario(){
+  const sim = SIM_CALC || computeCurrentSimulation();
+  const text = summarizeScenario(sim, DATA.times || []);
+  navigator.clipboard?.writeText(text).then(()=>toast('Cenário copiado.'),()=>toast('Não foi possível copiar automaticamente.', true));
+}
+
 function renderRules(){ const r=DATA.regras, audit=auditInternal(); $('rulesGrid').innerHTML = `<article><strong>Fase de grupos</strong><p>Placar exato/cravada: <b>${r.fase_grupos.placar_exato}</b> pontos. Vencedor ou empate correto: <b>${r.fase_grupos.vencedor_ou_empate}</b> pontos. A cravada substitui o acerto simples.</p></article><article><strong>Classificados aos 1/16 avos</strong><p>Cada seleção corretamente classificada vale <b>${r.classificados_grupos.por_selecao_classificada}</b> pontos. A ordem no grupo não importa.</p></article><article><strong>Mata-mata</strong><p>Confronto correto: <b>${r.mata_mata.confronto_correto}</b>. Seleção que avança: <b>${r.mata_mata.avanco_por_fase}</b>. Placar exato vale <b>${r.mata_mata.placar_exato_bonus}</b> pontos, não 5, e exige confronto + classificado correto.</p></article><article><strong>Bônus finais</strong><p>Campeão: <b>${r.bonus_finais.campeao}</b>. Vice: <b>${r.bonus_finais.vice}</b>. 3º lugar: <b>${r.bonus_finais.terceiro}</b>. 4º lugar: <b>${r.bonus_finais.quarto}</b>. Artilheiro: <b>${r.bonus_finais.artilheiro}</b>.</p></article><article><strong>Desempate</strong><p>${(r.desempate||[]).map(esc).join(' → ') || 'Não informado nos dados.'}</p></article><article><strong>Conferência</strong><p>Compare Ranking, Palpites e Resultados para entender cada ponto.</p></article>`; }
 
 function badge(status){ const s=String(status||'pendente').toLowerCase(); const cls=s.includes('exato')||s.includes('correto')||s.includes('classificado')?'good':s.includes('erro')?'bad':'warn'; return `<span class="pill ${cls}">${esc(status||'pendente')}</span>`; }
