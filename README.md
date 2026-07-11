@@ -45,3 +45,20 @@ Testes incluídos:
 - soma do detalhe igual ao total;
 - fluxo de lançamento/exportação/importação do `resultados.json`;
 - cenário real solicitado: França 2 x 0 Marrocos e Espanha 2 x 1 Bélgica alteram o ranking.
+
+
+## Correção V9 — publicação real do resultados.json
+
+A página pública agora **ignora simulações locais por padrão**. Isso evita que um resultado antigo salvo no navegador mascare o arquivo `data/resultados.json` publicado no GitHub.
+
+Fluxo correto:
+
+1. Abra `gestao-resultados.html`.
+2. Digite `GESTAO`.
+3. Lance placar e classificado.
+4. Clique em **Ver site com esta simulação** para conferir localmente.
+5. Clique em **Baixar resultados.json**.
+6. No GitHub, entre em `data/resultados.json`, clique no lápis, apague tudo, cole o conteúdo do novo JSON e faça commit.
+7. Abra o site público com Ctrl+F5 ou janela anônima.
+
+A página pública deve mostrar no topo a fonte `data/resultados.json` e o número de jogos concluídos. Se aparecer `simulação local`, limpe usando `index.html?simulacao=limpar`.

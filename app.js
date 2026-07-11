@@ -4,8 +4,11 @@ const files = ['regras','times','resultados','participantes','apostas_detalhes',
 const CACHE_BUST = Date.now();
 const LOCAL_RESULTS_KEY = 'bolao_resultados_publico_local_v8';
 const LEGACY_LOCAL_KEYS = ['bolao_resultados_publico_local_v5','bolao_resultados_publico_local_v6','bolao_resultados_publico_local_v7'];
-const USE_LOCAL_SIMULATION = new URLSearchParams(location.search).get('simulacao') !== '0';
+const SIM_PARAM = new URLSearchParams(location.search).get('simulacao');
+const USE_LOCAL_SIMULATION = SIM_PARAM === '1';
+const CLEAR_LOCAL_SIMULATION = SIM_PARAM === 'limpar';
 let usingLocalResults = false;
+let resultsSource = 'data/resultados.json';
 const titles = {home:'Início', ranking:'Ranking Geral', palpites:'Palpites', resultados:'Resultados', estatisticas:'Estatísticas', conferencia:'Conferência Individual', comparar:'Comparar', regras:'Regras'};
 const allPhases = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
 const phaseLabels = {'Rodada de 32':'1/16 avos','Oitavas de Final':'Oitavas','Quartas de Final':'Quartas','Semifinais':'Semifinal','3º Lugar':'3º lugar','Fase de Grupos':'Fase de grupos'};
@@ -17,32 +20,64 @@ const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('pt-BR');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
+
+function normalizeResultsPayload(payload){
+  if(Array.isArray(payload)) return payload;
+  if(payload && Array.isArray(payload.resultados)) return payload.resultados;
+  if(payload && Array.isArray(payload.results)) return payload.results;
+  return [];
+}
+function playedCount(results){ return (results || []).filter(isPlayed).length; }
+function maxResultUpdatedAt(results){
+  const dates = (results || [])
+    .map(g => g?.resultados_json_updated_at || g?.updated_at || g?.last_updated_at || g?.exported_at)
+    .filter(Boolean)
+    .map(d => new Date(d).getTime())
+    .filter(Number.isFinite);
+  return dates.length ? new Date(Math.max(...dates)) : null;
+}
+function resultUpdateLabel(){
+  const fromResults = maxResultUpdatedAt(DATA.resultados);
+  const date = fromResults || new Date(DATA.estatisticas.generated_at);
+  const count = playedCount(DATA.resultados);
+  const src = usingLocalResults ? 'simulação local' : resultsSource;
+  return `${date.toLocaleString('pt-BR')} · ${count} jogos concluídos · fonte: ${src}`;
+}
+
 async function loadData(){
   try{
     for(const f of files) {
-      DATA[f] = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
+      const payload = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
+      DATA[f] = f === 'resultados' ? normalizeResultsPayload(payload) : payload;
     }
-    // V8: tolerância operacional. Se o arquivo exportado pela gestão tiver sido enviado por engano
-    // para a raiz do repositório como resultados.json, o site usa essa versão quando ela tiver
-    // mais jogos concluídos que data/resultados.json.
+    // V9: o site público NÃO usa simulação local por padrão. Isso evita que um localStorage antigo
+    // mascare o data/resultados.json publicado no GitHub. A simulação só entra com ?simulacao=1.
+    if(CLEAR_LOCAL_SIMULATION){
+      localStorage.removeItem(LOCAL_RESULTS_KEY);
+      for(const k of LEGACY_LOCAL_KEYS) localStorage.removeItem(k);
+      history.replaceState(null,'','index.html');
+    }
+    // Tolerância operacional: se o arquivo foi enviado por engano na raiz, usar só quando ele tiver
+    // MAIS jogos concluídos do que data/resultados.json; empate não substitui a fonte correta.
     try{
       const rootResp = await fetch(`resultados.json?v=${CACHE_BUST}`, { cache:'no-store' });
       if(rootResp.ok){
-        const rootResults = await rootResp.json();
-        if(Array.isArray(rootResults) && rootResults.filter(isPlayed).length >= DATA.resultados.filter(isPlayed).length){
+        const rootResults = normalizeResultsPayload(await rootResp.json());
+        if(rootResults.length && playedCount(rootResults) > playedCount(DATA.resultados)){
           DATA.resultados = rootResults;
+          resultsSource = 'resultados.json na raiz';
         }
       }
     }catch(e){ /* arquivo raiz não existe: fluxo normal */ }
-    for(const k of LEGACY_LOCAL_KEYS) localStorage.removeItem(k);
     const localRaw = USE_LOCAL_SIMULATION ? localStorage.getItem(LOCAL_RESULTS_KEY) : null;
     if(localRaw){
       try{
         const parsed = JSON.parse(localRaw);
-        const localResults = Array.isArray(parsed) ? parsed : parsed.resultados;
-        if(Array.isArray(localResults) && localResults.length && localResults.filter(isPlayed).length >= DATA.resultados.filter(isPlayed).length){
+        const localResults = normalizeResultsPayload(parsed);
+        if(localResults.length && playedCount(localResults) >= playedCount(DATA.resultados)){
           DATA.resultados = localResults;
           usingLocalResults = true;
+          resultsSource = 'localStorage / gestao-resultados';
         }
       }catch(e){ console.warn('Resultados locais ignorados', e); }
     }
@@ -72,7 +107,7 @@ function matchHTML(match){ const parts = teamsFromMatch(match); return parts.len
 function score(g){ return g?.score && g.score !== 'nullxnull' ? g.score : '—'; }
 function safe(v){ return v || '—'; }
 function phaseLabel(p){ return phaseLabels[p] || p || 'A definir'; }
-function lastUpdated(){ return new Date(DATA.estatisticas.generated_at).toLocaleString('pt-BR'); }
+function lastUpdated(){ return resultUpdateLabel(); }
 function isPenaltyGame(g){ return g && g.game_id>=73 && isPlayed(g) && g.home_goals === g.away_goals && g.advancer; }
 function isPending(g){ return !isPlayed(g); }
 function pointsCls(n){ return Number(n)>0 ? 'pos-points' : 'zero-points'; }
@@ -129,7 +164,7 @@ function renderHome(){
   const ranking = CALC.ranking, pending = DATA.resultados.filter(isPending).sort((a,b)=>a.game_id-b.game_id), played = DATA.resultados.filter(isPlayed).length;
   const mostExact = [...ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0];
   $('podium').innerHTML = ranking.slice(0,3).map((r,i)=>`<div class="podium-card podium-${i+1}"><div class="podium-pos">${i===0?'🥇':i===1?'🥈':'🥉'}</div><div><div class="podium-name">${esc(r.display_name)}</div><span class="podium-meta">${r.grupos} grupos · ${r.mata_mata} mata-mata · ${r.cravadas} 🎯</span></div><div class="podium-points">${r.total}</div></div>`).join('');
-  const audit = auditInternal(); $('auditBanner').className = `audit-banner ${audit.length?'bad':'good'}`; $('auditBanner').innerHTML = (usingLocalResults ? `🧪 <b>Modo local/simulação ativo neste navegador.</b> O ranking abaixo foi recalculado com resultados lançados na gestão local. Para todos verem igual, exporte e publique o <code>data/resultados.json</code> no GitHub. Use <code>?simulacao=0</code> para ignorar a simulação local. <button class="link-btn" id="clearLocalResults">limpar simulação</button><br>` : '') + (audit.length ? `⚠️ Auditoria encontrou ${audit.length} alerta(s). Verifique os detalhes antes de divulgar.` : `✅ Auditoria interna OK: totais batem com os detalhes, sem NaN, sem pontos negativos e com cravadas conferíveis.`); setTimeout(()=>{ const clear=$('clearLocalResults'); if(clear) clear.onclick=()=>{ localStorage.removeItem(LOCAL_RESULTS_KEY); location.href='index.html'; }; },0);
+  const audit = auditInternal(); $('auditBanner').className = `audit-banner ${audit.length?'bad':'good'}`; $('auditBanner').innerHTML = (usingLocalResults ? `🧪 <b>Modo simulação local ativo.</b> Esta visualização usa dados da gestão neste navegador. Para publicar para todos, baixe o JSON e substitua <code>data/resultados.json</code> no GitHub. <a class="link-btn" href="index.html?simulacao=limpar">limpar simulação</a><br>` : `🌐 <b>Modo público oficial.</b> Esta página está lendo <code>${esc(resultsSource)}</code>; simulações locais ficam desligadas por padrão.<br>`) + (audit.length ? `⚠️ Auditoria encontrou ${audit.length} alerta(s). Verifique os detalhes antes de divulgar.` : `✅ Auditoria interna OK: totais batem com os detalhes, sem NaN, sem pontos negativos e com cravadas conferíveis.`);
   const kpis = [['Participantes', DATA.estatisticas.entries_valid, `${DATA.estatisticas.entries_total} apostas no relatório`], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${mostExact?.cravadas || 0} cravadas de grupo`], ['Última atualização', lastUpdated(), 'dados estruturados']];
   $('kpis').innerHTML = kpis.map(([label,value,sub])=>`<div class="kpi"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></div>`).join('');
   $('homeTop10').innerHTML = ranking.slice(0,10).map(rankItem).join('');

@@ -53,8 +53,8 @@ for(const r of result){
 const editedResults = structuredClone(data.resultados);
 const g97 = editedResults.find(g=>g.game_id===97);
 g97.home='FRA'; g97.away='MAR'; g97.home_name='França'; g97.away_name='Marrocos'; g97.home_goals=2; g97.away_goals=0; g97.score='2x0'; g97.status='Finalizado'; g97.winner='FRA'; g97.advancer='FRA';
-const g99 = editedResults.find(g=>g.game_id===99);
-g99.home='ESP'; g99.away='BEL'; g99.home_name='Espanha'; g99.away_name='Bélgica'; g99.home_goals=2; g99.away_goals=1; g99.score='2x1'; g99.status='Finalizado'; g99.winner='ESP'; g99.advancer='ESP';
+const g98 = editedResults.find(g=>g.game_id===98);
+g98.home='ESP'; g98.away='BEL'; g98.home_name='Espanha'; g98.away_name='Bélgica'; g98.home_goals=2; g98.away_goals=1; g98.score='2x1'; g98.status='Finalizado'; g98.winner='ESP'; g98.advancer='ESP';
 const preview = calculate({...structuredClone(data), resultados: editedResults}).ranking;
 const exportedPrepared = prepareResults(editedResults, data.times);
 const exportedJson = JSON.stringify(exportedPrepared,null,2);
@@ -64,7 +64,7 @@ assert.deepEqual(afterPublish.map(r=>({id:r.entry_id,total:r.total,pos:r.posicao
 assert.ok(preview.some((r,i)=>r.total !== result[i].total || r.posicao !== result[i].posicao), 'lançar França 2x0 Marrocos e Espanha 2x1 Bélgica deve alterar a prévia de pontuação/posição de alguém');
 assert.ok(preview[0].total > result[0].total, 'o líder deve ganhar pontos no cenário solicitado, provando cálculo automático');
 assert.equal(exportedPrepared.find(g=>g.game_id===97)?.home, 'FRA', 'exportação deve preservar/derivar França no jogo 97');
-assert.equal(exportedPrepared.find(g=>g.game_id===99)?.home, 'ESP', 'exportação deve preservar/derivar Espanha no jogo 99');
+assert.equal(exportedPrepared.find(g=>g.game_id===98)?.home, 'ESP', 'exportação deve preservar/derivar Espanha no jogo 98');
 
 // Fases exibidas: quartas só aparece como definida quando houver resultado.
 for(const ph of ['Fase de Grupos','Rodada de 32','Oitavas de Final']) assert.ok(data.resultados.some(g=>g.phase===ph && g.status!=='Pendente' && g.score), `fase ${ph} deve ter jogos finalizados para estatísticas`);

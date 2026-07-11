@@ -14,8 +14,23 @@ const team = code => `${teamFlag(code)} ${teamName(code)}`;
 const phaseOrder = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
 const bracketMap = {101:[97,98],102:[99,100],104:[101,102]};
 
+
+function normalizeResultsPayload(payload){
+  if(Array.isArray(payload)) return payload;
+  if(payload && Array.isArray(payload.resultados)) return payload.resultados;
+  if(payload && Array.isArray(payload.results)) return payload.results;
+  return [];
+}
+function stampResults(results){
+  const now = new Date().toISOString();
+  return prepareResults(results, DATA.times).map(g => ({...g, resultados_json_updated_at: now}));
+}
+
 async function loadData(){
-  for(const f of files) DATA[f] = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
+  for(const f of files){
+    const payload = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
+    DATA[f] = f === 'resultados' ? normalizeResultsPayload(payload) : payload;
+  }
   for(const k of LEGACY_KEYS){ if(localStorage.getItem(k)) localStorage.removeItem(k); }
   originalResults = structuredClone(DATA.resultados);
   const saved = localStorage.getItem(ADMIN_LOCAL_KEY);
@@ -32,16 +47,16 @@ function bind(){
   $('phaseFilter').onchange=()=>renderAdmin();
   $('resetLocal').onclick=()=>{ if(confirm('Descartar alterações locais e voltar aos resultados publicados?')){ localStorage.removeItem(ADMIN_LOCAL_KEY); localStorage.removeItem(PUBLIC_LOCAL_KEY); localResults=structuredClone(originalResults); recalc(); renderAdmin(); toast('Alterações locais descartadas.'); }};
   $('recalc').onclick=()=>{ recalc(); renderAdmin(); toast('Prévia recalculada.'); };
-  $('downloadResults').onclick=()=>{ recalc(); const errs=validate(); if(errs.length){ toast('Corrija as validações antes de exportar.', true); renderErrors(); return; } const prepared = prepareResults(localResults, DATA.times); download('resultados.json', JSON.stringify(prepared,null,2)); showExportText(prepared); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub.'); };
+  $('downloadResults').onclick=()=>{ recalc(); const errs=validate(); if(errs.length){ toast('Corrija as validações antes de exportar.', true); renderErrors(); return; } const prepared = stampResults(localResults); download('resultados.json', JSON.stringify(prepared,null,2)); showExportText(prepared); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub e use Ctrl+F5.'); };
   $('downloadRanking').onclick=()=>{ recalc(); download('ranking_previo.json', JSON.stringify(localCalc.ranking,null,2)); };
   if($('inferBracket')) $('inferBracket').onclick=()=>{ normalizeAll(true); recalc(); renderAdmin(); toast('Chaves futuras atualizadas com base nos classificados já lançados.'); };
   if($('downloadBundle')) $('downloadBundle').onclick=()=>{ recalc(); download('bolao-dados-atualizados.json', JSON.stringify({resultados: localResults, ranking_previo: localCalc.ranking, gerado_em: new Date().toISOString()}, null, 2)); };
   if($('openPublicLocal')) $('openPublicLocal').onclick=()=>{ recalc(); window.open('index.html?simulacao=1','_blank'); };
-  if($('copyResults')) $('copyResults').onclick=()=>{ recalc(); const prepared = prepareResults(localResults, DATA.times); showExportText(prepared); const el=$('exportText'); el.select(); document.execCommand('copy'); toast('JSON copiado. Cole no arquivo data/resultados.json do GitHub.'); };
+  if($('copyResults')) $('copyResults').onclick=()=>{ recalc(); const prepared = stampResults(localResults); showExportText(prepared); const el=$('exportText'); el.select(); document.execCommand('copy'); toast('JSON copiado. Cole no arquivo data/resultados.json do GitHub.'); };
   if($('hideExportText')) $('hideExportText').onclick=()=>{ $('exportBox').style.display='none'; };
 }
 function renderFilters(){ $('phaseFilter').innerHTML = phaseOrder.map(p=>`<option value="${p}">${p}</option>`).join(''); }
-function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem(ADMIN_LOCAL_KEY, JSON.stringify(localResults)); localStorage.setItem(PUBLIC_LOCAL_KEY, JSON.stringify({resultados: localResults, gerado_em: new Date().toISOString()})); renderPreview(); }
+function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem(ADMIN_LOCAL_KEY, JSON.stringify(localResults)); localStorage.setItem(PUBLIC_LOCAL_KEY, JSON.stringify({resultados: stampResults(localResults), gerado_em: new Date().toISOString()})); renderPreview(); }
 function normalizeGame(g){
   if(g.home === '') g.home = null;
   if(g.away === '') g.away = null;
@@ -122,6 +137,7 @@ function onEdit(e){
   if(field==='home_goals' || field==='away_goals') val = val==='' ? null : Number(val);
   if((field==='home' || field==='away') && val==='') val=null;
   g[field]=val;
+  g.updated_at = new Date().toISOString();
   if((field==='home' || field==='away') && g.advancer && ![g.home,g.away].includes(g.advancer)) g.advancer=null;
   if(field==='home_goals' || field==='away_goals') g.status='Finalizado';
   normalizeGame(g); recalc(); renderAdmin();
