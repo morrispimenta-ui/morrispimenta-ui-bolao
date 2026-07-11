@@ -54,9 +54,10 @@ function resultUpdateLabel(){
   const fromMeta = metaDate ? new Date(metaDate) : null;
   const fromResults = maxResultUpdatedAt(DATA.resultados);
   const date = fromMeta && Number.isFinite(fromMeta.getTime()) ? fromMeta : (fromResults || new Date(DATA.estatisticas?.generated_at || Date.now()));
-  const count = playedCount(DATA.resultados);
-  const src = usingLocalResults ? 'simulação local' : resultsSource;
-  return `${date.toLocaleString('pt-BR')} · ${count} jogos concluídos · fonte: ${src}`;
+  return date.toLocaleString('pt-BR');
+}
+function resultUpdateShort(){
+  return `${lastUpdated()} · ${playedCount(DATA.resultados)} jogos concluídos`;
 }
 function liveStats(){
   const valid = CALC.ranking.length;
@@ -131,8 +132,8 @@ async function loadData(){
     detailsByEntry = CALC.details;
     enrichExactLists();
     init();
-    toast(usingLocalResults ? 'Dados carregados com simulação local: ranking recalculado.' : 'Dados carregados. Ranking recalculado sem total manual.');
-  }catch(err){ console.error(err); toast('Erro ao carregar dados. Verifique os arquivos JSON.', true); }
+    toast('Bolão atualizado.');
+  }catch(err){ console.error(err); toast('Não foi possível carregar os dados. Atualize a página e tente novamente.', true); }
 }
 
 function teamName(code){ if(!code) return 'A definir'; return teamMap[code]?.name || code; }
@@ -207,8 +208,7 @@ function renderHome(){
   const ranking = CALC.ranking, pending = DATA.resultados.filter(isPending).sort((a,b)=>a.game_id-b.game_id), played = DATA.resultados.filter(isPlayed).length;
   const mostExact = [...ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0];
   $('podium').innerHTML = ranking.slice(0,3).map((r,i)=>`<div class="podium-card podium-${i+1}"><div class="podium-pos">${i===0?'🥇':i===1?'🥈':'🥉'}</div><div><div class="podium-name">${esc(r.display_name)}</div><span class="podium-meta">${r.grupos} grupos · ${r.mata_mata} mata-mata · ${r.cravadas} 🎯</span></div><div class="podium-points">${r.total}</div></div>`).join('');
-  const audit = auditInternal(); $('auditBanner').className = `audit-banner ${audit.length?'bad':'good'}`; $('auditBanner').innerHTML = (usingLocalResults ? `🧪 <b>Modo simulação local ativo.</b> Esta visualização usa dados da gestão neste navegador. Para publicar para todos, baixe o JSON e substitua <code>data/resultados.json</code> no GitHub. <a class="link-btn" href="index.html?simulacao=limpar">limpar simulação</a><br>` : `🌐 <b>Modo público oficial.</b> Esta página está lendo <code>${esc(resultsSource)}</code>; simulações locais ficam desligadas por padrão.<br>`) + (audit.length ? `⚠️ Auditoria encontrou ${audit.length} alerta(s). Verifique os detalhes antes de divulgar.` : `✅ Auditoria interna OK: totais batem com os detalhes, sem NaN, sem pontos negativos e com cravadas conferíveis.`);
-  const st=liveStats(); const kpis = [['Participantes', st.valid, `${st.total} apostas no relatório · ${st.invalid} fora da pontuação`], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${mostExact?.cravadas || 0} cravadas de grupo`], ['Última atualização', lastUpdated(), 'dados estruturados']];
+  const st=liveStats(); const kpis = [['Participantes', st.valid, 'apostas consideradas'], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo jogo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${mostExact?.cravadas || 0} cravadas`], ['Última atualização', lastUpdated(), `${played} jogos concluídos`]];
   $('kpis').innerHTML = kpis.map(([label,value,sub])=>`<div class="kpi"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></div>`).join('');
   $('homeTop10').innerHTML = ranking.slice(0,10).map(rankItem).join('');
   $('pendingGamesHome').innerHTML = pending.slice(0,8).map(gameRow).join('') || `<div class="empty-state">Nenhum jogo pendente.</div>`;
@@ -217,9 +217,62 @@ function renderHome(){
 function rankItem(r){ const medal = r.posicao===1?'🥇':r.posicao===2?'🥈':r.posicao===3?'🥉':r.posicao; return `<div class="rank-item"><div class="rank-badge">${medal}</div><div><button class="participant-btn" data-open-entry="${r.entry_id}">${esc(r.display_name)}</button><span>${r.grupos} grupos · ${r.mata_mata} mata-mata · ${r.cravadas} cravadas</span></div><div class="rank-score">${r.total}</div></div>`; }
 
 function renderRanking(){
-  $('rankingHead').innerHTML = `<tr class="group-row"><th colspan="3" class="block-main">Principal</th><th colspan="3" class="block-synth">Síntese</th><th colspan="3" class="block-r32">1/16 avos</th><th colspan="3" class="block-oct">Oitavas</th><th colspan="3" class="block-qua">Quartas</th><th colspan="3" class="block-semi">Semifinal</th><th colspan="3" class="block-final">Final</th><th colspan="5" class="block-bonus">Apostas finais</th></tr><tr><th class="block-main">#</th><th class="block-main">Participante</th><th class="block-main">Total</th><th class="block-synth" title="Pontos de confronto + placar, sem avanço">Mata s/ classificados</th><th class="block-synth">Seleções classificadas</th><th class="block-synth">Cravadas</th>${koPhases.map(()=>`<th class="phase-col">Jogos</th><th class="phase-col">Avanço</th><th class="phase-col">Bônus</th>`).join('')}<th class="block-bonus">Campeão</th><th class="block-bonus">Vice</th><th class="block-bonus">3º</th><th class="block-bonus">4º</th><th class="block-bonus">Artilheiro</th></tr>`;
-  const draw = ()=>{ const q = ($('rankingSearch').value||'').toLowerCase().trim(); const rows = CALC.ranking.filter(r=>r.display_name.toLowerCase().includes(q)); $('rankingBody').innerHTML = rows.map(r=>{ const b = phaseBreakdown(r.entry_id), finals = r.finals || {}, medal = r.posicao===1?'🥇':r.posicao===2?'🥈':r.posicao===3?'🥉':r.posicao; return `<tr class="rank-row rank-${r.posicao<=3?r.posicao:'normal'}"><td class="pos block-main">${medal}</td><td class="block-main"><button class="participant-btn" data-open-entry="${r.entry_id}">${esc(r.display_name)}</button></td><td class="num total block-main">${r.total}</td><td class="num block-synth">${r.ko_confronto + r.ko_placar}</td><td class="num block-synth">${r.classificados}</td><td class="num block-synth"><span class="target">🎯</span> ${r.cravadas}</td>${koPhases.map(ph=>`<td class="num phase-col ${pointsCls(b[ph]?.jogos)}">${b[ph]?.jogos||0}</td><td class="num phase-col ${pointsCls(b[ph]?.avanco)}">${b[ph]?.avanco||0}</td><td class="num phase-col ${pointsCls(b[ph]?.bonus)}">${b[ph]?.bonus||0}</td>`).join('')}<td class="block-bonus">${esc(safe(finals.campeao))}</td><td class="block-bonus">${esc(safe(finals.vice))}</td><td class="block-bonus">${esc(safe(finals.terceiro))}</td><td class="block-bonus">${esc(safe(finals.quarto))}</td><td class="block-bonus">${esc(safe(finals.artilheiro))}</td></tr>`; }).join(''); bindOpeners(); };
-  $('rankingSearch').addEventListener('input', draw); $('rankingExport').onclick = copyTop10; draw();
+  const draw = ()=>{
+    const q = ($('rankingSearch').value||'').toLowerCase().trim();
+    const rows = CALC.ranking.filter(r=>r.display_name.toLowerCase().includes(q));
+    $('rankingCards').innerHTML = rows.map(rankCardBase44).join('') || `<div class="empty-state big-empty">Nenhum participante encontrado.</div>`;
+    bindOpeners();
+  };
+  $('rankingSearch').addEventListener('input', draw);
+  $('rankingExport').onclick = copyTop10;
+  draw();
+}
+function rankCardBase44(r){
+  const finals = r.finals || {};
+  const medal = r.posicao===1?'🥇':r.posicao===2?'🥈':r.posicao===3?'🥉':`${r.posicao}º`;
+  const champ = teamCodeFromName(finals.campeao);
+  const b = phaseBreakdown(r.entry_id);
+  return `<details class="rank-card-base44 rank-${r.posicao<=3?r.posicao:'normal'}">
+    <summary>
+      <div class="rank-pos">${medal}</div>
+      <div class="rank-main">
+        <strong>${esc(r.display_name)}</strong>
+        <small>G: ${r.grupos} · M: ${r.mata_mata} · B: ${r.bonus||0}</small>
+        <span class="expand-hint">⌄ Ver composição</span>
+      </div>
+      <div class="rank-metric points"><b>${r.total}</b><small>pts</small></div>
+      <div class="rank-metric"><b>⚡ ${r.cravadas}</b><small>cravadas</small></div>
+      <div class="rank-champ">${champ?team(champ,true):esc(safe(finals.campeao))}</div>
+    </summary>
+    <div class="rank-composition">
+      <section class="composition-box group">
+        <h4>🌎 Fase de grupos</h4>
+        <div class="comp-line"><span>Jogos da fase de grupos</span><b>${r.grupos_jogos} pts</b></div>
+        <div class="comp-line"><span>Classificados corretos</span><b>${r.classificados_acertos || 0} × 5 = ${r.classificados} pts</b></div>
+        <div class="comp-line total"><span>Subtotal grupos</span><b>${r.grupos} pts</b></div>
+      </section>
+      <section class="composition-box ko">
+        <h4>⚔️ Mata-mata</h4>
+        <div class="comp-line"><span>Confrontos corretos</span><b>${r.ko_confronto || 0} pts</b></div>
+        <div class="comp-line"><span>Avanços corretos</span><b>${r.ko_avanco || 0} pts</b></div>
+        <div class="comp-line"><span>Placar exato válido</span><b>${r.ko_placar || 0} pts</b></div>
+        <details class="phase-detail-mini"><summary>Avanços por fase</summary>
+          ${koPhases.map(ph=>`<div class="comp-line mini"><span>${phaseLabel(ph)}</span><b>${b[ph]?.avanco||0} pts</b></div>`).join('')}
+        </details>
+        <div class="comp-line total"><span>Subtotal mata-mata</span><b>${r.mata_mata} pts</b></div>
+      </section>
+      <section class="composition-box finals">
+        <h4>⭐ Bônus finais</h4>
+        <div class="comp-line"><span>Campeão</span><b>${esc(safe(finals.campeao))}</b></div>
+        <div class="comp-line"><span>Vice</span><b>${esc(safe(finals.vice))}</b></div>
+        <div class="comp-line"><span>3º lugar</span><b>${esc(safe(finals.terceiro))}</b></div>
+        <div class="comp-line"><span>4º lugar</span><b>${esc(safe(finals.quarto))}</b></div>
+        <div class="comp-line"><span>Artilheiro</span><b>${esc(safe(finals.artilheiro))}</b></div>
+        <div class="comp-line total"><span>Total bônus</span><b>${r.bonus||0} pts</b></div>
+      </section>
+      <div class="composition-actions"><button class="btn tiny" data-open-entry="${r.entry_id}">Abrir conferência completa</button></div>
+    </div>
+  </details>`;
 }
 function bindOpeners(){ document.querySelectorAll('[data-open-entry]').forEach(btn=>btn.onclick=()=>openParticipant(Number(btn.dataset.openEntry))); }
 function copyTop10(){ const text = CALC.ranking.slice(0,10).map(r=>`${r.posicao}. ${r.display_name} — ${r.total} pts`).join('\n'); navigator.clipboard?.writeText(text); toast('Top 10 copiado.'); }
@@ -238,8 +291,53 @@ function renderPalpites(){
   $('palpiteTeam').innerHTML = `<option value="Todas">Todas as seleções</option>` + DATA.times.map(t=>`<option value="${t.code}">${t.flag} ${esc(t.name)}</option>`).join('');
   $('palpiteStatus').innerHTML = ['Todos','placar exato','vencedor/empate','confronto correto','classificado correto','confronto + classificado','erro','pendente'].map(s=>`<option value="${s}">${s}</option>`).join('');
   const allRows = buildPalpiteRows();
-  const draw = ()=>{ const q = $('palpiteSearch').value.toLowerCase().trim(), teamCode = $('palpiteTeam').value, phase = $('palpitePhase').value, game = $('palpiteGame').value.trim().replace('#',''), status = $('palpiteStatus').value; const filtered = allRows.filter(x => (!q || x.participant.toLowerCase().includes(q)) && (teamCode==='Todas' || x.teams.includes(teamCode)) && (phase==='Todas' || x.phase===phase) && (!game || String(x.game_id)===game) && (status==='Todos' || String(x.status||'').toLowerCase().includes(status.toLowerCase()))); $('palpitesCount').textContent = `${fmt.format(filtered.length)} palpites encontrados`; $('palpitesBody').innerHTML = filtered.map(x=>`<article class="palpite-card ${Number(x.points)>0?'hit':'miss'}"><header><div><button class="participant-btn" data-open-entry="${x.entry_id}">${esc(x.participant)}</button><span class="palpite-meta">#${x.game_id} · ${phaseLabel(x.phase)}</span></div><div class="palpite-points">${x.points}<small>pts</small></div></header><div class="palpite-grid"><section><span>Jogo oficial</span><b>${x.official}</b></section><section><span>Palpite</span><b>${x.palpite}</b></section><section><span>Resultado oficial</span><b>${x.result}</b></section><section><span>Status</span><b>${badge(x.status)}</b></section></div></article>`).join('') || `<div class="empty-state big-empty">Nenhum palpite encontrado.</div>`; bindOpeners(); };
-  ['palpiteSearch','palpiteTeam','palpitePhase','palpiteGame','palpiteStatus'].forEach(id=>$(id).addEventListener('input', draw)); draw();
+  const draw = ()=>{
+    const q = $('palpiteSearch').value.toLowerCase().trim();
+    const teamCode = $('palpiteTeam').value;
+    const phase = $('palpitePhase').value;
+    const game = $('palpiteGame').value.trim().replace('#','');
+    const status = $('palpiteStatus').value;
+    const filtered = allRows.filter(x => (!q || x.participant.toLowerCase().includes(q)) && (teamCode==='Todas' || x.teams.includes(teamCode)) && (phase==='Todas' || x.phase===phase) && (!game || String(x.game_id)===game) && (status==='Todos' || String(x.status||'').toLowerCase().includes(status.toLowerCase())));
+    $('palpitesCount').textContent = `${fmt.format(filtered.length)} palpites encontrados`;
+    $('palpitesBody').innerHTML = filtered.map(palpiteCardBase44).join('') || `<div class="empty-state big-empty">Nenhum palpite encontrado.</div>`;
+    bindOpeners();
+  };
+  ['palpiteSearch','palpiteTeam','palpitePhase','palpiteGame','palpiteStatus'].forEach(id=>$(id).addEventListener('input', draw));
+  draw();
+}
+function palpiteCardBase44(x){
+  const pts = Number(x.points||0);
+  const cls = pts>0?'hit':'miss';
+  const status = String(x.status||'pendente');
+  return `<details class="palpite-line-card ${cls}">
+    <summary>
+      <div class="palpite-person">
+        <strong>${esc(x.participant)}</strong>
+        <small>#${x.game_id} · ${phaseLabel(x.phase)}</small>
+      </div>
+      <div class="palpite-match">${x.official}</div>
+      <div class="palpite-status-compact">${badge(status)}</div>
+      <div class="palpite-score-compact"><b>${pts}</b><small>pts</small></div>
+      <span class="expand-hint">Ver detalhes</span>
+    </summary>
+    <div class="palpite-detail-clean">
+      <section><span>Palpite</span><b>${x.palpite}</b></section>
+      <section><span>Resultado oficial</span><b>${x.result}</b></section>
+      <section><span>Explicação</span><p>${esc(explainPalpiteRow(x))}</p></section>
+      <button class="btn tiny" data-open-entry="${x.entry_id}">Abrir conferência do participante</button>
+    </div>
+  </details>`;
+}
+function explainPalpiteRow(x){
+  if(String(x.status||'').toLowerCase().includes('pendente')) return 'Jogo ainda sem resultado oficial computado.';
+  if(Number(x.points||0)===0) return 'Este palpite não gerou ponto neste jogo/fase.';
+  if(x.type==='grupo') return x.points===5 ? 'Placar exato na fase de grupos: 5 pontos.' : 'Vencedor ou empate correto na fase de grupos: 3 pontos.';
+  const bits=[];
+  const status=String(x.status||'');
+  if(status.includes('confronto')) bits.push('confronto correto');
+  if(status.includes('classificado')) bits.push('classificado/avanço correto');
+  if(status.includes('placar')) bits.push('placar exato válido no mata-mata');
+  return bits.length ? `Pontuou por ${bits.join(' + ')}.` : 'Sem pontuação neste jogo.';
 }
 
 function renderResults(){
@@ -281,9 +379,9 @@ function copyParticipantSummary(id){ const r=CALC.ranking.find(x=>x.entry_id===i
 
 function renderStats(){
   const st=liveStats();
-  $('statsUpdate').textContent = lastUpdated();
+  $('statsUpdate').textContent = resultUpdateShort();
   $('statsCards').innerHTML = `
-    <section class="panel stats-card"><h4>🎯 Apostas aprovadas</h4><b>${st.valid}</b><p>${st.invalid} fora da pontuação</p></section>
+    <section class="panel stats-card"><h4>🎯 Apostas consideradas</h4><b>${st.valid}</b><p>Participantes no ranking</p></section>
     <section class="panel stats-card"><h4>⚽ Jogos computados</h4><b>${st.played}</b><p>${st.pending} pendentes</p></section>
     <section class="panel stats-card"><h4>📊 Média de pontos</h4><b>${st.avgPoints.toFixed(1)}</b><p>Pontos totais ÷ apostas válidas</p></section>
     <section class="panel stats-card"><h4>🏆 Maior pontuação</h4><b>${st.leader.total||0} pts</b><p>${esc(st.leader.display_name||'—')}</p></section>
@@ -388,7 +486,7 @@ function renderEvolution(){
 }
 
 function renderCompare(){ const options=participantsOptions(); $('compareA').innerHTML=options; $('compareB').innerHTML=options; const draw=()=>{ const a=Number($('compareA').value), b=Number($('compareB').value); if(!a||!b){ $('compareResult').className='compare-grid empty-state'; $('compareResult').textContent='Selecione dois participantes.'; return; } $('compareResult').className='compare-grid'; const A=CALC.ranking.find(x=>x.entry_id===a), B=CALC.ranking.find(x=>x.entry_id===b); $('compareResult').innerHTML = [A,B].map(r=>`<article class="compare-card"><h4>${esc(r.display_name)}</h4><div class="big-score">${r.total}</div><p>${r.posicao}º lugar</p><div class="stat-line"><span>Grupos</span><b>${r.grupos}</b></div><div class="stat-line"><span>Mata-mata</span><b>${r.mata_mata}</b></div><div class="stat-line"><span>Classificados</span><b>${r.classificados}</b></div><div class="stat-line"><span>Cravadas</span><b>${r.cravadas}</b></div><button class="btn tiny" data-open-entry="${r.entry_id}">Explodir detalhes</button></article>`).join(''); bindOpeners(); }; $('compareA').addEventListener('change',draw); $('compareB').addEventListener('change',draw); draw(); }
-function renderRules(){ const r=DATA.regras, audit=auditInternal(); $('rulesGrid').innerHTML = `<article><strong>Fase de grupos</strong><p>Placar exato/cravada: <b>${r.fase_grupos.placar_exato}</b> pontos. Vencedor ou empate correto: <b>${r.fase_grupos.vencedor_ou_empate}</b> pontos. A cravada substitui o acerto simples.</p></article><article><strong>Classificados aos 1/16 avos</strong><p>Cada seleção corretamente classificada vale <b>${r.classificados_grupos.por_selecao_classificada}</b> pontos. A ordem no grupo não importa.</p></article><article><strong>Mata-mata</strong><p>Confronto correto: <b>${r.mata_mata.confronto_correto}</b>. Seleção que avança: <b>${r.mata_mata.avanco_por_fase}</b>. Placar exato vale <b>${r.mata_mata.placar_exato_bonus}</b> pontos, não 5, e exige confronto + classificado correto.</p></article><article><strong>Bônus finais</strong><p>Campeão: <b>${r.bonus_finais.campeao}</b>. Vice: <b>${r.bonus_finais.vice}</b>. 3º lugar: <b>${r.bonus_finais.terceiro}</b>. 4º lugar: <b>${r.bonus_finais.quarto}</b>. Artilheiro: <b>${r.bonus_finais.artilheiro}</b>.</p></article><article><strong>Desempate</strong><p>${(r.desempate||[]).map(esc).join(' → ') || 'Não informado nos dados.'}</p></article><article><strong>Auditoria interna</strong><p>${audit.length?`Foram encontrados ${audit.length} alertas.`:'Totais batem com os detalhes. Sem total manual no ranking.'}</p></article>`; }
+function renderRules(){ const r=DATA.regras, audit=auditInternal(); $('rulesGrid').innerHTML = `<article><strong>Fase de grupos</strong><p>Placar exato/cravada: <b>${r.fase_grupos.placar_exato}</b> pontos. Vencedor ou empate correto: <b>${r.fase_grupos.vencedor_ou_empate}</b> pontos. A cravada substitui o acerto simples.</p></article><article><strong>Classificados aos 1/16 avos</strong><p>Cada seleção corretamente classificada vale <b>${r.classificados_grupos.por_selecao_classificada}</b> pontos. A ordem no grupo não importa.</p></article><article><strong>Mata-mata</strong><p>Confronto correto: <b>${r.mata_mata.confronto_correto}</b>. Seleção que avança: <b>${r.mata_mata.avanco_por_fase}</b>. Placar exato vale <b>${r.mata_mata.placar_exato_bonus}</b> pontos, não 5, e exige confronto + classificado correto.</p></article><article><strong>Bônus finais</strong><p>Campeão: <b>${r.bonus_finais.campeao}</b>. Vice: <b>${r.bonus_finais.vice}</b>. 3º lugar: <b>${r.bonus_finais.terceiro}</b>. 4º lugar: <b>${r.bonus_finais.quarto}</b>. Artilheiro: <b>${r.bonus_finais.artilheiro}</b>.</p></article><article><strong>Desempate</strong><p>${(r.desempate||[]).map(esc).join(' → ') || 'Não informado nos dados.'}</p></article><article><strong>Conferência</strong><p>Compare Ranking, Palpites e Resultados para entender cada ponto.</p></article>`; }
 
 function badge(status){ const s=String(status||'pendente').toLowerCase(); const cls=s.includes('exato')||s.includes('correto')||s.includes('classificado')?'good':s.includes('erro')?'bad':'warn'; return `<span class="pill ${cls}">${esc(status||'pendente')}</span>`; }
 function badgeText(status){ return String(status||'pendente'); }

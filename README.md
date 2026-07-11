@@ -1,49 +1,32 @@
-# Bolão Copa 2026 — V10 GitHub Pages
+# Bolão Copa 2026 — GitHub Pages V12
 
-Versão corrigida para publicação pública no GitHub Pages.
+Versão pública de conferência do Bolão Copa 2026, com visual inspirado no Base44 e telas mais leves para os participantes.
 
-## Principais correções da V10
+## O que mudou na V12
 
-- Página **Palpites** redesenhada em cards, com mais espaçamento e sem encavalamento.
-- Página **Estatísticas** reorganizada no padrão do Base44:
-  - Geral do Bolão
-  - Análise de Jogos
-  - Highlights
-  - Palpites Finais
-- O site público passa a ler e comparar corretamente `data/resultados.json`, inclusive quando o arquivo exportado contém `metadata`.
-- A data de última atualização passa a vir do `metadata.updated_at` do `resultados.json` exportado.
-- A gestão exporta `resultados.json` no formato:
-
-```json
-{
-  "metadata": { "updated_at": "...", "played_count": 98 },
-  "resultados": []
-}
-```
-
-- A base deste pacote já inclui os resultados:
-  - #97 França 2 x 0 Marrocos — França classificada
-  - #98 Espanha 2 x 1 Bélgica — Espanha classificada
+- Retirada da tela pública de mensagens administrativas/técnicas.
+- Página inicial ficou mais amigável para apostadores, mantendo apenas data/hora da última atualização.
+- Ranking e Palpites seguem em cards expansíveis: o essencial aparece primeiro e o detalhe abre sob demanda.
+- Estatísticas seguem organizadas nas seções Geral do Bolão, Análise de Jogos, Highlights e Palpites Finais.
+- Mantido o cálculo validado, sem alteração regressiva de pontuação.
 
 ## Como publicar
 
 Suba todo o conteúdo desta pasta na raiz do repositório GitHub Pages. O arquivo `index.html` deve ficar na raiz.
 
-## Como atualizar resultados no futuro
+## Como atualizar resultados
 
-1. Abra `gestao-resultados.html`.
-2. Digite `GESTAO`.
-3. Lance o placar e, no mata-mata, o classificado.
-4. Confira a prévia do ranking.
-5. Clique em **Baixar resultados.json** ou **Copiar JSON**.
-6. No GitHub, substitua o conteúdo de `data/resultados.json`.
-7. Faça commit e abra o site em janela anônima/Ctrl+F5.
+A área de lançamento continua disponível em `gestao-resultados.html`, fora do menu público. Depois de exportar o novo `resultados.json`, substitua o arquivo `data/resultados.json` no repositório.
 
-## Testes
-
-Executado com sucesso:
+## Testes executados
 
 ```bash
 npm test
 npm run auditar
 ```
+
+Resultado na base atual:
+
+- 58 participantes válidos.
+- 0 divergências de ranking após auditoria.
+- Placar exato no mata-mata permanece valendo 3 pontos.
