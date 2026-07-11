@@ -1,36 +1,23 @@
-# Bolão Copa 2026 · Valencia / Legion / PPK — V13
+# Bolão Copa 2026 — Atualização V14
 
-Versão pública para GitHub Pages com visual limpo, conferência auditável e nova aba **Simulador**.
+Versão pública para GitHub Pages com:
 
-## O que há nesta versão
+- Estatísticas separando cravadas de grupos, cravadas de mata-mata e cravadas totais estatísticas.
+- Placar exato no mata-mata preservado como bônus de 3 pontos, sem alterar o ranking oficial.
+- Aba Palpites reorganizada em cards expansíveis por apostador, com detalhes por fase apenas ao clicar.
+- Sumário final do apostador com campeão, vice, terceiro, quarto e artilheiro.
+- Simulador preservado como funcionalidade recreativa/local, sem alterar resultados oficiais.
 
-- Ranking oficial preservado.
-- Palpites e conferência em cards expansíveis.
-- Resultados oficiais somente leitura.
-- Estatísticas em seções no padrão Base44.
-- Gestão de resultados em rota separada (`gestao-resultados.html`), fora do menu público.
-- Nova aba pública **Simulador**:
-  - simula apenas confrontos pendentes;
-  - mostra ranking simulado no topo;
-  - monta chave à esquerda;
-  - mostra campeão, vice, terceiro, quarto e artilheiro à direita;
-  - não altera `data/resultados.json`;
-  - não altera ranking oficial;
-  - funciona apenas na sessão do usuário.
+## Publicação
 
-## Publicação no GitHub Pages
+Suba todo o conteúdo deste pacote na raiz do repositório GitHub Pages, substituindo os arquivos atuais.
+O arquivo `index.html` deve ficar na raiz do repositório.
 
-Suba todo o conteúdo desta pasta na raiz do repositório. O arquivo `index.html` deve ficar na raiz.
-
-## Atualização oficial dos resultados
-
-A página pública usa apenas `data/resultados.json` como fonte oficial. A área de gestão gera novo JSON para substituição manual desse arquivo no GitHub.
-
-## Testes
+## Testes executados
 
 ```bash
 npm test
 npm run auditar
 ```
 
-Os testes incluem regras oficiais, regressão do ranking e isolamento do simulador.
+Resultado esperado: 58 participantes, 0 divergências de ranking e placar exato do mata-mata valendo 3 pontos.

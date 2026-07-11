@@ -51,6 +51,18 @@ for(const r of result){
   assert.equal(r.cravadas, groupCravadas, `${r.display_name}: cravadas deve contar só placares exatos de grupos`);
 }
 
+
+// Estatísticas de cravadas: o ranking oficial usa cravadas de grupos, mas as estatísticas também exibem mata-mata.
+const groupExactTotal = result.reduce((sum,r)=>sum+Number(r.cravadas_grupo || r.cravadas || 0),0);
+const koExactTotal = result.reduce((sum,r)=>sum+Number(r.cravadas_mata_mata || r.placares_exatos_mata_mata || 0),0);
+const koExactPoints = result.reduce((sum,r)=>sum+Number(r.ko_placar || 0),0);
+assert.ok(groupExactTotal > 0, 'deve haver cravadas de grupos nas estatísticas');
+assert.ok(koExactTotal > 0, 'deve haver cravadas de mata-mata nas estatísticas');
+assert.equal(koExactPoints, koExactTotal * 3, 'cada cravada de mata-mata deve gerar exatamente 3 pontos de bônus');
+for(const r of result){
+  assert.equal(Number(r.ko_placar || 0), Number(r.cravadas_mata_mata || r.placares_exatos_mata_mata || 0) * 3, `${r.display_name}: bônus de placar do mata-mata deve ser cravadas_mata_mata x 3`);
+}
+
 // Fluxo de gestão: alterar resultados.json/exportar objeto com metadata e reabrir deve produzir o mesmo ranking.
 const editedResults = structuredClone(resultadosArray);
 const g97 = editedResults.find(g=>g.game_id===97);
