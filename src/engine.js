@@ -25,7 +25,8 @@ export function alignedExact(predPair,predScore,game){
   const byTeam={}; byTeam[predPair[0]]=s[0]; byTeam[predPair[1]]=s[1];
   return byTeam[game.home]===game.home_goals && byTeam[game.away]===game.away_goals;
 }
-function cloneResults(resultados){ return (resultados||[]).map(g=>({...g})); }
+function normalizeResultsInput(resultados){ if(Array.isArray(resultados)) return resultados; if(resultados && Array.isArray(resultados.resultados)) return resultados.resultados; if(resultados && Array.isArray(resultados.results)) return resultados.results; return []; }
+function cloneResults(resultados){ return normalizeResultsInput(resultados).map(g=>({...g})); }
 function teamName(code, teams){ return (teams||[]).find(t=>t.code===code)?.name || code || 'A definir'; }
 export function normalizeGame(g, teams=[]){
   if(!g) return g;

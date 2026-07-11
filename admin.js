@@ -23,7 +23,21 @@ function normalizeResultsPayload(payload){
 }
 function stampResults(results){
   const now = new Date().toISOString();
-  return prepareResults(results, DATA.times).map(g => ({...g, resultados_json_updated_at: now}));
+  return prepareResults(results, DATA.times).map(g => ({...g, resultados_json_updated_at: now, updated_at: g.updated_at || now}));
+}
+function buildResultsPayload(results){
+  const stamped = stampResults(results);
+  const now = new Date().toISOString();
+  return {
+    metadata: {
+      updated_at: now,
+      generated_at: now,
+      version: 'v10',
+      played_count: stamped.filter(isPlayed).length,
+      fonte: 'gestao-resultados.html'
+    },
+    resultados: stamped
+  };
 }
 
 async function loadData(){
@@ -47,16 +61,16 @@ function bind(){
   $('phaseFilter').onchange=()=>renderAdmin();
   $('resetLocal').onclick=()=>{ if(confirm('Descartar alterações locais e voltar aos resultados publicados?')){ localStorage.removeItem(ADMIN_LOCAL_KEY); localStorage.removeItem(PUBLIC_LOCAL_KEY); localResults=structuredClone(originalResults); recalc(); renderAdmin(); toast('Alterações locais descartadas.'); }};
   $('recalc').onclick=()=>{ recalc(); renderAdmin(); toast('Prévia recalculada.'); };
-  $('downloadResults').onclick=()=>{ recalc(); const errs=validate(); if(errs.length){ toast('Corrija as validações antes de exportar.', true); renderErrors(); return; } const prepared = stampResults(localResults); download('resultados.json', JSON.stringify(prepared,null,2)); showExportText(prepared); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub e use Ctrl+F5.'); };
+  $('downloadResults').onclick=()=>{ recalc(); const errs=validate(); if(errs.length){ toast('Corrija as validações antes de exportar.', true); renderErrors(); return; } const prepared = buildResultsPayload(localResults); download('resultados.json', JSON.stringify(prepared,null,2)); showExportText(prepared); toast('Arquivo resultados.json baixado. Substitua data/resultados.json no GitHub e use Ctrl+F5.'); };
   $('downloadRanking').onclick=()=>{ recalc(); download('ranking_previo.json', JSON.stringify(localCalc.ranking,null,2)); };
   if($('inferBracket')) $('inferBracket').onclick=()=>{ normalizeAll(true); recalc(); renderAdmin(); toast('Chaves futuras atualizadas com base nos classificados já lançados.'); };
   if($('downloadBundle')) $('downloadBundle').onclick=()=>{ recalc(); download('bolao-dados-atualizados.json', JSON.stringify({resultados: localResults, ranking_previo: localCalc.ranking, gerado_em: new Date().toISOString()}, null, 2)); };
   if($('openPublicLocal')) $('openPublicLocal').onclick=()=>{ recalc(); window.open('index.html?simulacao=1','_blank'); };
-  if($('copyResults')) $('copyResults').onclick=()=>{ recalc(); const prepared = stampResults(localResults); showExportText(prepared); const el=$('exportText'); el.select(); document.execCommand('copy'); toast('JSON copiado. Cole no arquivo data/resultados.json do GitHub.'); };
+  if($('copyResults')) $('copyResults').onclick=()=>{ recalc(); const prepared = buildResultsPayload(localResults); showExportText(prepared); const el=$('exportText'); el.select(); document.execCommand('copy'); toast('JSON copiado. Cole no arquivo data/resultados.json do GitHub.'); };
   if($('hideExportText')) $('hideExportText').onclick=()=>{ $('exportBox').style.display='none'; };
 }
 function renderFilters(){ $('phaseFilter').innerHTML = phaseOrder.map(p=>`<option value="${p}">${p}</option>`).join(''); }
-function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem(ADMIN_LOCAL_KEY, JSON.stringify(localResults)); localStorage.setItem(PUBLIC_LOCAL_KEY, JSON.stringify({resultados: stampResults(localResults), gerado_em: new Date().toISOString()})); renderPreview(); }
+function recalc(){ normalizeAll(); localCalc = calculate({...DATA, resultados: structuredClone(localResults)}); localStorage.setItem(ADMIN_LOCAL_KEY, JSON.stringify(localResults)); localStorage.setItem(PUBLIC_LOCAL_KEY, JSON.stringify(buildResultsPayload(localResults))); renderPreview(); }
 function normalizeGame(g){
   if(g.home === '') g.home = null;
   if(g.away === '') g.away = null;

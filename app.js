@@ -9,6 +9,7 @@ const USE_LOCAL_SIMULATION = SIM_PARAM === '1';
 const CLEAR_LOCAL_SIMULATION = SIM_PARAM === 'limpar';
 let usingLocalResults = false;
 let resultsSource = 'data/resultados.json';
+let resultsMeta = {};
 const titles = {home:'Início', ranking:'Ranking Geral', palpites:'Palpites', resultados:'Resultados', estatisticas:'Estatísticas', conferencia:'Conferência Individual', comparar:'Comparar', regras:'Regras'};
 const allPhases = ['Todas','Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
 const phaseLabels = {'Rodada de 32':'1/16 avos','Oitavas de Final':'Oitavas','Quartas de Final':'Quartas','Semifinais':'Semifinal','3º Lugar':'3º lugar','Fase de Grupos':'Fase de grupos'};
@@ -21,12 +22,13 @@ const fmt = new Intl.NumberFormat('pt-BR');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
 
-function normalizeResultsPayload(payload){
-  if(Array.isArray(payload)) return payload;
-  if(payload && Array.isArray(payload.resultados)) return payload.resultados;
-  if(payload && Array.isArray(payload.results)) return payload.results;
-  return [];
+function unpackResultsPayload(payload){
+  if(Array.isArray(payload)) return {resultados:payload, meta:{}};
+  if(payload && Array.isArray(payload.resultados)) return {resultados:payload.resultados, meta:payload.metadata || payload.meta || {}};
+  if(payload && Array.isArray(payload.results)) return {resultados:payload.results, meta:payload.metadata || payload.meta || {}};
+  return {resultados:[], meta:{}};
 }
+function normalizeResultsPayload(payload){ return unpackResultsPayload(payload).resultados; }
 function playedCount(results){ return (results || []).filter(isPlayed).length; }
 function maxResultUpdatedAt(results){
   const dates = (results || [])
@@ -36,19 +38,54 @@ function maxResultUpdatedAt(results){
     .filter(Number.isFinite);
   return dates.length ? new Date(Math.max(...dates)) : null;
 }
+function metaTime(meta){
+  const raw = meta?.updated_at || meta?.generated_at || meta?.exported_at || meta?.data_atualizacao;
+  const t = raw ? new Date(raw).getTime() : NaN;
+  return Number.isFinite(t) ? t : 0;
+}
+function resultTime(results, meta={}){ return Math.max(metaTime(meta), maxResultUpdatedAt(results)?.getTime() || 0); }
+function shouldPreferResults(candidate, candidateMeta, current, currentMeta){
+  const pc = playedCount(candidate), cc = playedCount(current);
+  if(pc !== cc) return pc > cc;
+  return resultTime(candidate, candidateMeta) > resultTime(current, currentMeta);
+}
 function resultUpdateLabel(){
+  const metaDate = resultsMeta?.updated_at || resultsMeta?.generated_at || resultsMeta?.exported_at;
+  const fromMeta = metaDate ? new Date(metaDate) : null;
   const fromResults = maxResultUpdatedAt(DATA.resultados);
-  const date = fromResults || new Date(DATA.estatisticas.generated_at);
+  const date = fromMeta && Number.isFinite(fromMeta.getTime()) ? fromMeta : (fromResults || new Date(DATA.estatisticas?.generated_at || Date.now()));
   const count = playedCount(DATA.resultados);
   const src = usingLocalResults ? 'simulação local' : resultsSource;
   return `${date.toLocaleString('pt-BR')} · ${count} jogos concluídos · fonte: ${src}`;
+}
+function liveStats(){
+  const valid = CALC.ranking.length;
+  const played = playedCount(DATA.resultados);
+  const pending = (DATA.resultados||[]).length - played;
+  const leader = CALC.ranking[0] || {};
+  const totalCravadas = CALC.ranking.reduce((s,r)=>s+Number(r.cravadas||0),0);
+  const totalPoints = CALC.ranking.reduce((s,r)=>s+Number(r.total||0),0);
+  const avgPoints = valid ? totalPoints/valid : 0;
+  const mostExact = [...CALC.ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0] || {};
+  const groupStats = gameAccuracyStats ? gameAccuracyStats().filter(g=>g.phase==='Fase de Grupos') : [];
+  const denom = valid * Math.max(1, groupStats.length);
+  const acertos = groupStats.reduce((s,g)=>s+g.acertos,0);
+  const hitRate = denom ? (acertos/denom*100) : 0;
+  return {valid, invalid:(DATA.participantes||[]).filter(p=>!p.valid).length, total:(DATA.participantes||[]).length, played, pending, leader, totalCravadas, avgPoints, mostExact, hitRate};
 }
 
 async function loadData(){
   try{
     for(const f of files) {
       const payload = await fetch(`data/${f}.json?v=${CACHE_BUST}`, { cache: 'no-store' }).then(r=>{ if(!r.ok) throw new Error(`Falha ao carregar ${f}`); return r.json(); });
-      DATA[f] = f === 'resultados' ? normalizeResultsPayload(payload) : payload;
+      if(f === 'resultados'){
+        const unpacked = unpackResultsPayload(payload);
+        DATA.resultados = unpacked.resultados;
+        resultsMeta = unpacked.meta || {};
+        DATA.resultados_meta = resultsMeta;
+      } else {
+        DATA[f] = payload;
+      }
     }
     // V9: o site público NÃO usa simulação local por padrão. Isso evita que um localStorage antigo
     // mascare o data/resultados.json publicado no GitHub. A simulação só entra com ?simulacao=1.
@@ -62,9 +99,12 @@ async function loadData(){
     try{
       const rootResp = await fetch(`resultados.json?v=${CACHE_BUST}`, { cache:'no-store' });
       if(rootResp.ok){
-        const rootResults = normalizeResultsPayload(await rootResp.json());
-        if(rootResults.length && playedCount(rootResults) > playedCount(DATA.resultados)){
+        const rootUnpacked = unpackResultsPayload(await rootResp.json());
+        const rootResults = rootUnpacked.resultados;
+        if(rootResults.length && shouldPreferResults(rootResults, rootUnpacked.meta, DATA.resultados, resultsMeta)){
           DATA.resultados = rootResults;
+          resultsMeta = rootUnpacked.meta || {};
+          DATA.resultados_meta = resultsMeta;
           resultsSource = 'resultados.json na raiz';
         }
       }
@@ -73,9 +113,12 @@ async function loadData(){
     if(localRaw){
       try{
         const parsed = JSON.parse(localRaw);
-        const localResults = normalizeResultsPayload(parsed);
-        if(localResults.length && playedCount(localResults) >= playedCount(DATA.resultados)){
+        const localUnpacked = unpackResultsPayload(parsed);
+        const localResults = localUnpacked.resultados;
+        if(localResults.length && (playedCount(localResults) >= playedCount(DATA.resultados) || shouldPreferResults(localResults, localUnpacked.meta, DATA.resultados, resultsMeta))){
           DATA.resultados = localResults;
+          resultsMeta = localUnpacked.meta || {};
+          DATA.resultados_meta = resultsMeta;
           usingLocalResults = true;
           resultsSource = 'localStorage / gestao-resultados';
         }
@@ -165,7 +208,7 @@ function renderHome(){
   const mostExact = [...ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0];
   $('podium').innerHTML = ranking.slice(0,3).map((r,i)=>`<div class="podium-card podium-${i+1}"><div class="podium-pos">${i===0?'🥇':i===1?'🥈':'🥉'}</div><div><div class="podium-name">${esc(r.display_name)}</div><span class="podium-meta">${r.grupos} grupos · ${r.mata_mata} mata-mata · ${r.cravadas} 🎯</span></div><div class="podium-points">${r.total}</div></div>`).join('');
   const audit = auditInternal(); $('auditBanner').className = `audit-banner ${audit.length?'bad':'good'}`; $('auditBanner').innerHTML = (usingLocalResults ? `🧪 <b>Modo simulação local ativo.</b> Esta visualização usa dados da gestão neste navegador. Para publicar para todos, baixe o JSON e substitua <code>data/resultados.json</code> no GitHub. <a class="link-btn" href="index.html?simulacao=limpar">limpar simulação</a><br>` : `🌐 <b>Modo público oficial.</b> Esta página está lendo <code>${esc(resultsSource)}</code>; simulações locais ficam desligadas por padrão.<br>`) + (audit.length ? `⚠️ Auditoria encontrou ${audit.length} alerta(s). Verifique os detalhes antes de divulgar.` : `✅ Auditoria interna OK: totais batem com os detalhes, sem NaN, sem pontos negativos e com cravadas conferíveis.`);
-  const kpis = [['Participantes', DATA.estatisticas.entries_valid, `${DATA.estatisticas.entries_total} apostas no relatório`], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${mostExact?.cravadas || 0} cravadas de grupo`], ['Última atualização', lastUpdated(), 'dados estruturados']];
+  const st=liveStats(); const kpis = [['Participantes', st.valid, `${st.total} apostas no relatório · ${st.invalid} fora da pontuação`], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${mostExact?.cravadas || 0} cravadas de grupo`], ['Última atualização', lastUpdated(), 'dados estruturados']];
   $('kpis').innerHTML = kpis.map(([label,value,sub])=>`<div class="kpi"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></div>`).join('');
   $('homeTop10').innerHTML = ranking.slice(0,10).map(rankItem).join('');
   $('pendingGamesHome').innerHTML = pending.slice(0,8).map(gameRow).join('') || `<div class="empty-state">Nenhum jogo pendente.</div>`;
@@ -195,7 +238,7 @@ function renderPalpites(){
   $('palpiteTeam').innerHTML = `<option value="Todas">Todas as seleções</option>` + DATA.times.map(t=>`<option value="${t.code}">${t.flag} ${esc(t.name)}</option>`).join('');
   $('palpiteStatus').innerHTML = ['Todos','placar exato','vencedor/empate','confronto correto','classificado correto','confronto + classificado','erro','pendente'].map(s=>`<option value="${s}">${s}</option>`).join('');
   const allRows = buildPalpiteRows();
-  const draw = ()=>{ const q = $('palpiteSearch').value.toLowerCase().trim(), teamCode = $('palpiteTeam').value, phase = $('palpitePhase').value, game = $('palpiteGame').value.trim().replace('#',''), status = $('palpiteStatus').value; const filtered = allRows.filter(x => (!q || x.participant.toLowerCase().includes(q)) && (teamCode==='Todas' || x.teams.includes(teamCode)) && (phase==='Todas' || x.phase===phase) && (!game || String(x.game_id)===game) && (status==='Todos' || String(x.status||'').toLowerCase().includes(status.toLowerCase()))); $('palpitesCount').textContent = `${fmt.format(filtered.length)} palpites encontrados`; $('palpitesBody').innerHTML = filtered.map(x=>`<tr><td><button class="participant-btn" data-open-entry="${x.entry_id}">${esc(x.participant)}</button></td><td>${phaseLabel(x.phase)}</td><td>#${x.game_id}<br><small>${x.official}</small></td><td>${x.palpite}</td><td>${x.result}</td><td>${badge(x.status)}</td><td class="num total">${x.points}</td></tr>`).join('') || `<tr><td colspan="7" class="empty-state">Nenhum palpite encontrado.</td></tr>`; bindOpeners(); };
+  const draw = ()=>{ const q = $('palpiteSearch').value.toLowerCase().trim(), teamCode = $('palpiteTeam').value, phase = $('palpitePhase').value, game = $('palpiteGame').value.trim().replace('#',''), status = $('palpiteStatus').value; const filtered = allRows.filter(x => (!q || x.participant.toLowerCase().includes(q)) && (teamCode==='Todas' || x.teams.includes(teamCode)) && (phase==='Todas' || x.phase===phase) && (!game || String(x.game_id)===game) && (status==='Todos' || String(x.status||'').toLowerCase().includes(status.toLowerCase()))); $('palpitesCount').textContent = `${fmt.format(filtered.length)} palpites encontrados`; $('palpitesBody').innerHTML = filtered.map(x=>`<article class="palpite-card ${Number(x.points)>0?'hit':'miss'}"><header><div><button class="participant-btn" data-open-entry="${x.entry_id}">${esc(x.participant)}</button><span class="palpite-meta">#${x.game_id} · ${phaseLabel(x.phase)}</span></div><div class="palpite-points">${x.points}<small>pts</small></div></header><div class="palpite-grid"><section><span>Jogo oficial</span><b>${x.official}</b></section><section><span>Palpite</span><b>${x.palpite}</b></section><section><span>Resultado oficial</span><b>${x.result}</b></section><section><span>Status</span><b>${badge(x.status)}</b></section></div></article>`).join('') || `<div class="empty-state big-empty">Nenhum palpite encontrado.</div>`; bindOpeners(); };
   ['palpiteSearch','palpiteTeam','palpitePhase','palpiteGame','palpiteStatus'].forEach(id=>$(id).addEventListener('input', draw)); draw();
 }
 
@@ -236,7 +279,52 @@ function reasonFor(status, points){ if(points===5) return 'Placar exato na fase 
 function koReason(x){ const bits=[]; if(x.points_confronto) bits.push('confronto correto +5'); if(x.points_avanco) bits.push('avanço correto +5'); if(x.points_placar) bits.push('placar exato +3'); return bits.join('; ') || 'Sem ponto neste jogo/fase'; }
 function copyParticipantSummary(id){ const r=CALC.ranking.find(x=>x.entry_id===id); if(!r) return; const text = `${r.display_name}: ${r.total} pts\nJogos de grupo: ${r.grupos_jogos}\nClassificados: ${r.classificados}\nMata-mata: ${r.mata_mata}\nCravadas: ${r.cravadas}`; navigator.clipboard?.writeText(text); toast('Resumo copiado.'); }
 
-function renderStats(){ const mostExact = [...CALC.ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0], played=DATA.resultados.filter(isPlayed).length, pending=DATA.resultados.length-played; $('statsCards').innerHTML = `<section class="panel stats-card"><h4>👥 Participantes</h4><b>${DATA.estatisticas.entries_valid}</b><p>${DATA.estatisticas.entries_invalid} apostas fora da pontuação</p></section><section class="panel stats-card"><h4>⚽ Jogos</h4><b>${played}</b><p>${pending} pendentes</p></section><section class="panel stats-card"><h4>🎯 Rei/Rainha das cravadas</h4><b>${esc(mostExact.display_name)}</b><p>${mostExact.cravadas} cravadas oficiais de grupo</p></section>`; renderPhaseStats(); renderTeamPhaseStats(); renderFinalsStats(); renderScorerStats(); renderExactStats(); renderHardEasyGames(); renderEvolution(); }
+function renderStats(){
+  const st=liveStats();
+  $('statsUpdate').textContent = lastUpdated();
+  $('statsCards').innerHTML = `
+    <section class="panel stats-card"><h4>🎯 Apostas aprovadas</h4><b>${st.valid}</b><p>${st.invalid} fora da pontuação</p></section>
+    <section class="panel stats-card"><h4>⚽ Jogos computados</h4><b>${st.played}</b><p>${st.pending} pendentes</p></section>
+    <section class="panel stats-card"><h4>📊 Média de pontos</h4><b>${st.avgPoints.toFixed(1)}</b><p>Pontos totais ÷ apostas válidas</p></section>
+    <section class="panel stats-card"><h4>🏆 Maior pontuação</h4><b>${st.leader.total||0} pts</b><p>${esc(st.leader.display_name||'—')}</p></section>
+    <section class="panel stats-card"><h4>⚡ Rei das cravadas</h4><b>${st.mostExact.cravadas||0}</b><p>${esc(st.mostExact.display_name||'—')}</p></section>
+    <section class="panel stats-card"><h4>✅ Total de cravadas</h4><b>${st.totalCravadas}</b><p>Soma de placares exatos de grupos</p></section>
+    <section class="panel stats-card"><h4>🎲 % médio de acerto</h4><b>${st.hitRate.toFixed(1)}%</b><p>Acertos em jogos de grupo computados</p></section>`;
+  renderRegularStats(); renderFeaturedStats(); renderPhaseSummaryStats(); renderPhaseStats(); renderTeamPhaseStats(); renderFinalsStats(); renderScorerStats(); renderExactStats(); renderHardEasyGames(); renderGameAnalysisStats(); renderEvolution(); bindStatsTabs(); bindFinalSwitches();
+}
+function bindStatsTabs(){ document.querySelectorAll('[data-stat-tab]').forEach(btn=>{ btn.onclick=()=>{ document.querySelectorAll('[data-stat-tab]').forEach(b=>b.classList.toggle('active', b===btn)); document.querySelectorAll('.stat-tab').forEach(t=>t.classList.remove('active')); $(`stat-${btn.dataset.statTab}`)?.classList.add('active'); }; }); }
+function bindFinalSwitches(){ document.querySelectorAll('[data-final-view]').forEach(btn=>{ btn.onclick=()=>{ document.querySelectorAll('[data-final-view]').forEach(b=>b.classList.toggle('active', b===btn)); renderFinalsStats(btn.dataset.finalView); }; }); }
+function renderRegularStats(){
+  const groupGames = DATA.resultados.filter(g=>g.phase==='Fase de Grupos' && isPlayed(g)).length || 72;
+  const rows = CALC.ranking.map(r=>{ const d=detailsByEntry[r.entry_id]; const hits=(d?.group_predictions||[]).filter(x=>Number(x.points||0)>0).length; return {r,hits,pct:groupGames?hits/groupGames*100:0}; }).sort((a,b)=>b.hits-a.hits || b.r.cravadas-a.r.cravadas || a.r.posicao-b.r.posicao).slice(0,5);
+  $('regularStats').innerHTML = rows.map((x,i)=>`<div class="stat-rank-line"><b>${i+1}º</b><span>${esc(x.r.display_name)}<small>Pontuou em ${x.hits}/${groupGames} jogos finalizados · ${x.r.cravadas} cravadas</small></span><strong>${x.pct.toFixed(0)}%</strong></div>`).join('');
+}
+function renderFeaturedStats(){
+  const top=CALC.ranking[0]||{};
+  const exact=[...CALC.ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0]||{};
+  const groupOnly=[...CALC.ranking].sort((a,b)=>b.grupos_jogos-a.grupos_jogos || a.posicao-b.posicao)[0]||{};
+  const groupClass=[...CALC.ranking].sort((a,b)=>b.grupos-a.grupos || a.posicao-b.posicao)[0]||{};
+  const classif=[...CALC.ranking].sort((a,b)=>b.classificados-a.classificados || a.posicao-b.posicao)[0]||{};
+  const cards=[['👑','REI DO BOLÃO',top.display_name,`Líder geral · ${top.total||0} pts · ${top.posicao||'—'}º`],['🎯','REI DAS CRAVADAS',exact.display_name,`${exact.cravadas||0} placares exatos · ${exact.total||0} pts`],['📚','PROFESSOR DA FASE DE GRUPOS',groupOnly.display_name,`Melhor em jogos de grupo · ${groupOnly.grupos_jogos||0} pts`],['🦁','REI DA FASE DE GRUPOS',groupClass.display_name,`Jogos + classificados · ${groupClass.grupos||0} pts`],['🧙','MAGO DOS CLASSIFICADOS',classif.display_name,`${classif.classificados_acertos||0}/32 classificados · ${classif.classificados||0} pts`],['🧠','MESTRE DOS BÔNUS','Ainda sem dados suficientes','Bônus finais aparecem quando final/3º lugar/artilheiro forem definidos.']];
+  $('featuredStats').innerHTML = cards.map(c=>`<article><span>${c[0]}</span><div><small>${esc(c[1])}</small><b>${esc(c[2]||'—')}</b><p>${esc(c[3]||'')}</p></div></article>`).join('');
+}
+function renderPhaseSummaryStats(){
+  const games=gameAccuracyStats();
+  const group=games.filter(g=>g.phase==='Fase de Grupos');
+  const ko=games.filter(g=>g.game_id>=73);
+  const easiest=[...group].sort((a,b)=>b.acertos-a.acertos || b.cravadas-a.cravadas)[0];
+  const hardest=[...group].sort((a,b)=>a.acertos-b.acertos || a.cravadas-b.cravadas)[0];
+  const phaseCards=[`<article class="phase-summary-card"><h4>⚽ Fase de Grupos</h4><div class="stat-line"><span>Jogos encerrados</span><b>${group.length}/72</b></div><div class="stat-line"><span>Média de acerto por jogo</span><b>${avgAccuracy(group).toFixed(1)}%</b></div><div class="stat-line"><span>Jogo mais fácil</span><b>${easiest?team(easiest.home,true)+' '+score(easiest)+' '+team(easiest.away,true):'—'}</b></div><div class="stat-line"><span>Jogo mais difícil</span><b>${hardest?team(hardest.home,true)+' '+score(hardest)+' '+team(hardest.away,true):'—'}</b></div></article>`, `<article class="phase-summary-card"><h4>⚔️ Mata-mata</h4><div class="stat-line"><span>Confrontos encerrados</span><b>${ko.length}/32</b></div><div class="stat-line"><span>Taxa de acerto de classificados</span><b>${avgAccuracy(ko).toFixed(1)}%</b></div><div class="stat-line"><span>Confronto mais acertado</span><b>${ko.length ? gameLabel([...ko].sort((a,b)=>b.acertos-a.acertos)[0]) : '—'}</b></div><div class="stat-line"><span>Campeão mais escolhido</span><b>${topMapLabel(finalPositionMap('campeao'))}</b></div></article>`];
+  $('phaseSummaryStats').innerHTML = phaseCards.join('');
+}
+function avgAccuracy(list){ const st=liveStats(); return list.length && st.valid ? list.reduce((s,g)=>s+g.acertos,0)/(list.length*st.valid)*100 : 0; }
+function gameLabel(g){ return g ? `${teamName(g.home)} x ${teamName(g.away)}` : '—'; }
+function topMapLabel(map){ const e=Object.entries(map||{}).sort((a,b)=>b[1].length-a[1].length)[0]; return e ? `${teamName(e[0])} (${e[1].length}x)` : '—'; }
+function renderGameAnalysisStats(){
+  const games=gameAccuracyStats().sort((a,b)=>a.game_id-b.game_id); const st=liveStats();
+  $('gameAnalysisCount').textContent = `${games.length} jogos finalizados · ${st.valid} apostas consideradas`;
+  $('gameAnalysisStats').innerHTML = games.map(g=>`<details class="analysis-game-card"><summary><span class="game-no">M${g.game_id}</span><span class="phase-pill">${phaseLabel(g.phase).replace('Fase de Grupos','Grupo '+(g.group||''))}</span><span class="analysis-match">${team(g.home,true)} <b>${score(g)}</b> ${team(g.away,true)}</span><span>Acertos: <b>${g.acertos}/${st.valid}</b></span><span>Cravadas: <b>${g.cravadas}/${st.valid}</b></span><strong class="${g.acertos/st.valid>.6?'green':'red'}">${(g.acertos/st.valid*100).toFixed(1)}%</strong><span>Ver detalhes</span></summary><p><b>Acertadores:</b> ${g.acertadores.map(esc).join(', ') || 'ninguém'}</p><p><b>Cravadas:</b> ${g.cravadores.map(esc).join(', ') || 'nenhuma'}</p></details>`).join('');
+}
 function renderPhaseStats(){ $('phaseStats').innerHTML = phasesWithResults().map(ph=>{ const participantRows = CALC.ranking.map(r=>({r, pts: ph==='Fase de Grupos' ? r.grupos : (phaseBreakdown(r.entry_id)[ph]?.total||0)})).sort((a,b)=>b.pts-a.pts || a.r.display_name.localeCompare(b.r.display_name,'pt-BR')); const selectionMap = ph==='Fase de Grupos' ? selectionMapFromQualified() : selectionMapFromPredictedWinners(ph); return `<div class="phase-box"><h4>${phaseLabel(ph)}</h4><div class="phase-columns"><div class="mini-box"><h5>Participantes</h5>${participantRows.map(({r,pts},i)=>`<details><summary><span>${i+1}. ${esc(r.display_name)}</span><b>${pts}</b></summary>${phaseParticipantDetails(r.entry_id, ph)}</details>`).join('')}</div><div class="mini-box"><h5>Seleções apostadas</h5>${selectionDetailsList(selectionMap)}</div></div></div>`; }).join(''); }
 function phaseParticipantDetails(id, ph){ const d=detailsByEntry[id]; if(ph==='Fase de Grupos') return `<p>${groupGamePoints(id)} pontos em jogos + ${CALC.ranking.find(r=>r.entry_id===id)?.classificados||0} em classificados.</p>`; const rows=(d.knockout_predictions||[]).filter(x=>phaseKey(x.game_id)===ph); return `<ul class="plain-list">${rows.map(x=>`<li>#${x.game_id}: ${matchHTML(x.prediction_match)} ${esc(x.prediction_score||'')} · ${badgeText(x.status)} · ${x.points||0} pts</li>`).join('')}</ul>`; }
 function selectionMapFromQualified(){ const m={}; for(const r of CALC.ranking){ for(const code of detailsByEntry[r.entry_id]?.predicted_qualified||[]){ (m[code] ||= []).push(r.display_name); } } return m; }
@@ -245,9 +333,9 @@ function selectionDetailsList(map){ return Object.entries(map).sort((a,b)=>b[1].
 function renderTeamPhaseStats(){ const cards=[['Aos 1/16 avos', selectionMapFromQualified()], ['Às oitavas', selectionMapFromPredictedWinners('Rodada de 32')], ['Às quartas', selectionMapFromPredictedWinners('Oitavas de Final')], ['À semifinal', selectionMapFromPredictedWinners('Quartas de Final')], ['À final', selectionMapFromPredictedWinners('Semifinais')], ['Como campeã', finalPositionMap('campeao')]]; $('teamPhaseStats').innerHTML = cards.map(([title,map])=>`<section class="stat-tile"><h4>${title}</h4>${selectionDetailsList(map)}</section>`).join(''); }
 function finalPositionMap(pos){ const m={}; for(const r of CALC.ranking){ const name=r.finals?.[pos]; const code=teamCodeFromName(name); if(code) (m[code] ||= []).push(r.display_name); else if(name) (m[name] ||= []).push(r.display_name); } return m; }
 function teamCodeFromName(name){ if(!name) return null; const t=DATA.times.find(t=>t.name.toLowerCase()===String(name).toLowerCase() || t.code===name); return t?.code || null; }
-function renderFinalsStats(){ const positions=[['campeao','Campeão'],['vice','Vice'],['terceiro','3º lugar'],['quarto','4º lugar']]; $('finalsStats').innerHTML = positions.map(([key,label])=>`<section class="stat-tile"><h4>${label}</h4>${barsFromMap(finalPositionMap(key))}</section>`).join(''); }
+function renderFinalsStats(pos='campeao'){ const labels={campeao:'Campeão',vice:'Vice',terceiro:'3º lugar',quarto:'4º lugar'}; if(pos==='artilheiro'){ $('finalsStats').style.display='none'; $('scorerStats').style.display='grid'; renderScorerStats(); return; } $('finalsStats').style.display='grid'; $('scorerStats').style.display='none'; $('finalsStats').innerHTML = `<section class="stat-tile final-wide"><h4>${labels[pos]||'Campeão'}</h4>${barsFromMap(finalPositionMap(pos))}</section>`; }
 function barsFromMap(map){ const entries=Object.entries(map).sort((a,b)=>b[1].length-a[1].length); const max=Math.max(1,...entries.map(e=>e[1].length)); return entries.map(([code,names])=>`<details class="bar-detail"><summary><span>${teamMap[code]?team(code,true):esc(code)}</span><b>${names.length}</b></summary><div class="bar"><i style="width:${Math.round((names.length/max)*100)}%"></i></div><p>${names.map(esc).join(', ')}</p></details>`).join('') || '<div class="empty-state">Sem apostas.</div>'; }
-function renderScorerStats(){ const m={}; for(const r of CALC.ranking){ const name=r.finals?.artilheiro; if(name) (m[name] ||= []).push(r.display_name); } $('scorerStats').innerHTML = Object.entries(m).sort((a,b)=>b[1].length-a[1].length || a[0].localeCompare(b[0],'pt-BR')).map(([name,names])=>`<details class="list-detail"><summary><span>${esc(name)}</span><b>${names.length}</b></summary><p>${names.map(esc).join(', ')}</p></details>`).join(''); }
+function renderScorerStats(){ const m={}; for(const r of CALC.ranking){ const name=r.finals?.artilheiro; if(name) (m[name] ||= []).push(r.display_name); } $('scorerStats').innerHTML = `<section class="stat-tile final-wide"><h4>Artilheiro</h4>${Object.entries(m).sort((a,b)=>b[1].length-a[1].length || a[0].localeCompare(b[0],'pt-BR')).map(([name,names])=>`<details class="list-detail"><summary><span>${esc(name)}</span><b>${names.length}</b></summary><p>${names.map(esc).join(', ')}</p></details>`).join('')}</section>`; }
 function renderExactStats(){ const exactRanking=[...CALC.ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao), games=gameAccuracyStats(), most=games.filter(g=>g.cravadas>0).sort((a,b)=>b.cravadas-a.cravadas).slice(0,10), phaseMap={}; for(const g of games){ phaseMap[phaseLabel(g.phase)] = (phaseMap[phaseLabel(g.phase)]||0)+g.cravadas; } $('exactStats').innerHTML = `<section class="stat-tile"><h4>Ranking completo de cravadas</h4>${exactRanking.map(r=>`<details><summary><span>${esc(r.display_name)}</span><b>${r.cravadas}</b></summary><p>${r.cravadas_grupo} em grupos · bônus placar mata-mata: ${r.placares_exatos_mata_mata||r.cravadas_mata_mata||0}</p>${exactHTML(detailsByEntry[r.entry_id])}</details>`).join('')}</section><section class="stat-tile"><h4>Jogos com mais cravadas</h4>${most.map(g=>`<details><summary><span>#${g.game_id} · ${team(g.home,true)} x ${team(g.away,true)}</span><b>${g.cravadas}</b></summary><p>${g.cravadores.map(esc).join(', ')}</p></details>`).join('')}</section><section class="stat-tile"><h4>Cravadas por fase</h4>${Object.entries(phaseMap).map(([ph,n])=>`<div class="stat-line"><span>${ph}</span><b>${n}</b></div>`).join('')}</section>`; }
 function gameAccuracyStats(){ return DATA.resultados.filter(isPlayed).map(g=>{ const acertadores=[], cravadores=[]; for(const r of CALC.ranking){ const d=detailsByEntry[r.entry_id]; let item; if(g.game_id<=72){ item=(d.group_predictions||[]).find(x=>x.game_id===g.game_id); if(item?.points>0) acertadores.push(r.display_name); if(item?.status==='placar exato') cravadores.push(r.display_name); } else { item=(d.knockout_predictions||[]).find(x=>x.game_id===g.game_id); if(item?.points>0) acertadores.push(r.display_name); } } return {...g, acertadores, cravadores, acertos:acertadores.length, cravadas:cravadores.length}; }); }
 function renderHardEasyGames(){ const groupGames = gameAccuracyStats().filter(g=>g.phase==='Fase de Grupos'), hard=[...groupGames].sort((a,b)=>a.acertos-b.acertos || a.cravadas-b.cravadas).slice(0,5), easy=[...groupGames].sort((a,b)=>b.acertos-a.acertos || b.cravadas-a.cravadas).slice(0,8); $('hardGames').innerHTML = hard.map(gameStatCard).join(''); $('easyGames').innerHTML = easy.map(gameStatCard).join(''); }

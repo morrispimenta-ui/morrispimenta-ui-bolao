@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bolão Copa 2026 · Valencia / Legion / PPK</title>
   <meta name="description" content="Conferência pública, automática e auditável do Bolão Copa 2026." />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <div class="app-shell">
@@ -117,7 +117,7 @@
             <input id="palpiteGame" class="search" placeholder="Jogo #" />
             <select id="palpiteStatus" class="select"></select>
           </div>
-          <div class="table-wrap"><table class="palpites-table"><thead><tr><th>Participante</th><th>Fase</th><th>Jogo oficial</th><th>Palpite</th><th>Resultado</th><th>Status</th><th>Pts</th></tr></thead><tbody id="palpitesBody"></tbody></table></div>
+          <div id="palpitesBody" class="palpites-cards"></div>
         </section>
       </section>
 
@@ -132,15 +132,36 @@
       </section>
 
       <section class="page" id="page-estatisticas">
-        <div class="content-grid three" id="statsCards"></div>
-        <section class="panel full"><div class="panel-head"><h3>🏁 Ranking por fase</h3><span class="mini-label">apenas fases com dados</span></div><div id="phaseStats" class="phase-stats"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>🌎 Seleções mais apostadas por fase</h3><span class="mini-label">clique para ver apostadores</span></div><div id="teamPhaseStats" class="stat-grid"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>🏆 Campeão, vice, 3º e 4º</h3><span class="mini-label">distribuição das apostas finais</span></div><div id="finalsStats" class="stat-grid"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>👟 Artilheiro</h3><span class="mini-label">ranking dos nomes apostados</span></div><div id="scorerStats" class="stat-grid"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>🎯 Cravadas</h3><span class="mini-label">placares exatos pontuados</span></div><div id="exactStats" class="stat-grid"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>🦓 As zebras do bolão</h3><span class="mini-label">pouca gente viu essa chegando</span></div><div id="hardGames" class="game-list"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>✅ Jogos mais previsíveis</h3><span class="mini-label">mais acertadores</span></div><div id="easyGames" class="game-list"></div></section>
-        <section class="panel full"><div class="panel-head"><h3>📈 Evolução do ranking</h3><span class="mini-label">histórico</span></div><div id="evolutionBox" class="empty-state big-empty"></div></section>
+        <section class="stats-title">
+          <div><h2>📊 Estatísticas</h2><p>Análises e curiosidades do bolão, no padrão de seções do app original.</p></div>
+          <span class="mini-label" id="statsUpdate">Atualizando...</span>
+        </section>
+        <div class="stats-tabs">
+          <button class="active" data-stat-tab="geral">🏰 Geral do Bolão</button>
+          <button data-stat-tab="jogos">🌎 Análise de Jogos</button>
+          <button data-stat-tab="highlights">✨ Highlights</button>
+          <button data-stat-tab="finais">🗂️ Palpites Finais</button>
+        </div>
+        <div class="stat-tab active" id="stat-geral">
+          <div class="content-grid three" id="statsCards"></div>
+          <section class="panel full"><div class="panel-head"><h3>📋 Os 5 mais regulares</h3><span class="mini-label">acertos na fase de grupos</span></div><div id="regularStats" class="rank-list"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>🌟 Apostadores em destaque</h3><span class="mini-label">especialistas do bolão</span></div><div id="featuredStats" class="featured-grid"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>📈 Estatísticas por fase</h3><span class="mini-label">dados recalculados com o resultado publicado</span></div><div id="phaseSummaryStats" class="phase-summary-list"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>🏆 Ranking de classificados por fase</h3><span class="mini-label">participantes e seleções</span></div><div id="phaseStats" class="phase-stats"></div></section>
+        </div>
+        <div class="stat-tab" id="stat-jogos">
+          <section class="panel full"><div class="panel-head"><h3>🌎 Análise de Jogos</h3><span class="mini-label" id="gameAnalysisCount">jogos computados</span></div><div id="gameAnalysisStats" class="analysis-list"></div></section>
+        </div>
+        <div class="stat-tab" id="stat-highlights">
+          <section class="panel full"><div class="panel-head"><h3>🗺️ Caminho previsto pela galera</h3><span class="mini-label">fase a fase</span></div><div id="teamPhaseStats" class="stat-grid"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>🦓 Os jogos que derrubaram geral</h3><span class="mini-label">menos acertadores</span></div><div id="hardGames" class="game-list"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>🎯 A galera viu essa chegando</h3><span class="mini-label">mais acertadores</span></div><div id="easyGames" class="game-list"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>🔥 Top Cravadores</h3><span class="mini-label">placares exatos de grupos</span></div><div id="exactStats" class="stat-grid"></div></section>
+          <section class="panel full"><div class="panel-head"><h3>📈 Evolução do ranking</h3><span class="mini-label">histórico automático</span></div><div id="evolutionBox" class="empty-state big-empty"></div></section>
+        </div>
+        <div class="stat-tab" id="stat-finais">
+          <section class="panel full"><div class="panel-head"><h3>📋 Quem a galera acha que vai ganhar?</h3><span class="mini-label">distribuição dos palpites finais</span></div><div class="final-switches"><button class="active" data-final-view="campeao">🥇 Campeão</button><button data-final-view="vice">🥈 Vice</button><button data-final-view="terceiro">🥉 3º lugar</button><button data-final-view="quarto">4️⃣ 4º lugar</button><button data-final-view="artilheiro">🌎 Artilheiro</button></div><div id="finalsStats" class="stat-grid final-only"></div><div id="scorerStats" class="stat-grid final-only"></div></section>
+        </div>
       </section>
 
       <section class="page" id="page-conferencia">
@@ -189,6 +210,6 @@
   </dialog>
 
   <div id="toast" class="toast">Carregando...</div>
-  <script type="module" src="app.js?v=9"></script>
+  <script type="module" src="app.js?v=10"></script>
 </body>
 </html>
