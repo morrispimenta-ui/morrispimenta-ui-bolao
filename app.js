@@ -3,6 +3,13 @@ import { computeSimulation, uniqueScorers, summarizeScenario, isEditableGame } f
 
 const files = ['regras','times','resultados','participantes','apostas_detalhes','ranking','estatisticas'];
 const CACHE_BUST = Date.now();
+const GOOGLE_RESULTS_SHEET_ID = '1Hmc6uddrpJMHdUZPOdOcT-ylt4gmdaUr';
+const GOOGLE_RESULTS_SHEET_NAME = 'resultados';
+const GOOGLE_RESULTS_GID = '0';
+const GOOGLE_RESULTS_CSV_URLS = [
+  `https://docs.google.com/spreadsheets/d/${GOOGLE_RESULTS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(GOOGLE_RESULTS_SHEET_NAME)}&v=${CACHE_BUST}`,
+  `https://docs.google.com/spreadsheets/d/${GOOGLE_RESULTS_SHEET_ID}/export?format=csv&gid=${GOOGLE_RESULTS_GID}&v=${CACHE_BUST}`
+];
 const LOCAL_RESULTS_KEY = 'bolao_resultados_publico_local_v8';
 const LEGACY_LOCAL_KEYS = ['bolao_resultados_publico_local_v5','bolao_resultados_publico_local_v6','bolao_resultados_publico_local_v7'];
 const SIM_PARAM = new URLSearchParams(location.search).get('simulacao');
@@ -33,6 +40,151 @@ function unpackResultsPayload(payload){
   return {resultados:[], meta:{}};
 }
 function normalizeResultsPayload(payload){ return unpackResultsPayload(payload).resultados; }
+
+function parseCSV(text){
+  const rows=[]; let row=[]; let cur=''; let inQuotes=false;
+  const input = String(text || '').replace(/^\uFEFF/, '');
+  for(let i=0;i<input.length;i++){
+    const ch=input[i], next=input[i+1];
+    if(inQuotes){
+      if(ch==='"' && next==='"'){ cur+='"'; i++; }
+      else if(ch==='"') inQuotes=false;
+      else cur+=ch;
+    }else{
+      if(ch==='"') inQuotes=true;
+      else if(ch===','){ row.push(cur); cur=''; }
+      else if(ch==='\n'){
+        row.push(cur); cur='';
+        if(row.some(v=>String(v).trim()!=='')) rows.push(row);
+        row=[];
+      }else if(ch==='\r'){
+        // ignore CR; LF handles row break
+      }else cur+=ch;
+    }
+  }
+  row.push(cur);
+  if(row.some(v=>String(v).trim()!=='')) rows.push(row);
+  return rows;
+}
+function headerKey(h){
+  return String(h || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+}
+function csvToObjects(text){
+  const rows=parseCSV(text);
+  if(!rows.length) return [];
+  const headers=rows[0].map(headerKey);
+  return rows.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h, (r[i] ?? '').trim()]))).filter(o=>o.game_id || o.jogo_id || o.id);
+}
+function toIntOrNull(v){
+  const raw=String(v ?? '').trim();
+  if(raw==='' || raw==='-' || raw.toLowerCase()==='null') return null;
+  const n=Number(raw.replace(',','.'));
+  return Number.isFinite(n) ? n : null;
+}
+function toBool(v){
+  const raw=String(v ?? '').trim().toLowerCase();
+  return ['sim','true','1','yes','y','s'].includes(raw);
+}
+function excelSerialToDate(n){
+  // Excel/Sheets serial date, with epoch offset including Excel's 1900 leap-year quirk.
+  const days=Number(n);
+  if(!Number.isFinite(days)) return null;
+  const utc = Math.round((days - 25569) * 86400 * 1000);
+  const d = new Date(utc);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+function parseSheetDate(v){
+  const raw=String(v ?? '').trim();
+  if(!raw) return null;
+  if(/^\d+(\.\d+)?$/.test(raw)) return excelSerialToDate(Number(raw));
+  const normalized = raw
+    .replace(/ às /i, ' ')
+    .replace(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/, (_,d,m,y,hh='00',mm='00',ss='00') => `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${String(hh).padStart(2,'0')}:${mm}:${ss}-03:00`);
+  const date = new Date(normalized);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+function firstDefined(...vals){
+  for(const v of vals){ if(v !== undefined && v !== null && String(v).trim() !== '') return v; }
+  return '';
+}
+function sheetRowToGame(row, fallback={}){
+  const game_id = toIntOrNull(firstDefined(row.game_id,row.jogo_id,row.id));
+  if(!game_id) return null;
+  const home_goals = toIntOrNull(firstDefined(row.home_goals,row.gols_mandante,row.gols_home,row.mandante_gols));
+  const away_goals = toIntOrNull(firstDefined(row.away_goals,row.gols_visitante,row.gols_away,row.visitante_gols));
+  const statusRaw = String(firstDefined(row.status,row.situacao,fallback.status,'Pendente')).trim();
+  const status = statusRaw || 'Pendente';
+  const home = String(firstDefined(row.home,row.mandante,fallback.home)).trim() || null;
+  const away = String(firstDefined(row.away,row.visitante,fallback.away)).trim() || null;
+  let score = String(firstDefined(row.score,row.placar)).trim() || null;
+  if(home_goals != null && away_goals != null) score = `${home_goals}x${away_goals}`;
+  const isDone = status.toLowerCase() !== 'pendente' && home_goals != null && away_goals != null;
+  let winner = String(firstDefined(row.winner,row.vencedor)).trim() || null;
+  if(isDone){
+    if(home_goals > away_goals) winner = home;
+    else if(home_goals < away_goals) winner = away;
+    else if(!winner) winner = game_id < 73 ? 'EMP' : null;
+  } else {
+    winner = null; score = null;
+  }
+  let advancer = String(firstDefined(row.advancer,row.classificado,row.avancou)).trim() || null;
+  if(!isDone) advancer = null;
+  if(isDone && game_id >= 73 && !advancer && winner && winner !== 'EMP') advancer = winner;
+  const updatedDate = parseSheetDate(firstDefined(row.updated_at,row.atualizado_em,row.resultados_json_updated_at));
+  return {
+    ...fallback,
+    game_id,
+    phase: String(firstDefined(row.phase,row.fase,fallback.phase)).trim() || fallback.phase || null,
+    group: String(firstDefined(row.group,row.grupo,fallback.group)).trim() || null,
+    home,
+    home_name: String(firstDefined(row.home_name,row.nome_mandante,fallback.home_name)).trim() || undefined,
+    away,
+    away_name: String(firstDefined(row.away_name,row.nome_visitante,fallback.away_name)).trim() || undefined,
+    home_goals: isDone ? home_goals : null,
+    away_goals: isDone ? away_goals : null,
+    score: isDone ? score : null,
+    status: isDone ? (status === 'Pendente' ? 'Finalizado' : status) : 'Pendente',
+    winner,
+    advancer,
+    pen_home: toIntOrNull(firstDefined(row.pen_home,row.penaltis_mandante,row.penaltis_home)),
+    pen_away: toIntOrNull(firstDefined(row.pen_away,row.penaltis_visitante,row.penaltis_away)),
+    decided_on_penalties: toBool(firstDefined(row.decided_on_penalties,row.penaltis,row.definido_nos_penaltis)) || (isDone && game_id >= 73 && home_goals === away_goals && !!advancer),
+    date_time: String(firstDefined(row.date_time,row.data_hora,fallback.date_time)).trim() || '',
+    location: String(firstDefined(row.location,row.local,fallback.location)).trim() || '',
+    stadium: String(firstDefined(row.stadium,row.estadio,fallback.stadium)).trim() || '',
+    updated_at: updatedDate ? updatedDate.toISOString() : (String(firstDefined(row.updated_at,row.atualizado_em,fallback.updated_at)).trim() || undefined),
+    resultados_json_updated_at: updatedDate ? updatedDate.toISOString() : (String(firstDefined(row.updated_at,row.atualizado_em,fallback.resultados_json_updated_at)).trim() || null),
+    notes: String(firstDefined(row.notes,row.observacoes,fallback.notes)).trim() || ''
+  };
+}
+function sheetCSVToResultsPayload(csvText, fallbackResults=[]){
+  const rows = csvToObjects(csvText);
+  const fallbackById = Object.fromEntries((fallbackResults || []).map(g=>[Number(g.game_id), g]));
+  const resultados = rows.map(row => sheetRowToGame(row, fallbackById[Number(firstDefined(row.game_id,row.jogo_id,row.id))] || {})).filter(Boolean).sort((a,b)=>a.game_id-b.game_id);
+  if(resultados.length < 80) throw new Error('Planilha de resultados incompleta ou aba incorreta.');
+  const updateTimes = resultados.map(g => parseSheetDate(g.updated_at || g.resultados_json_updated_at)?.getTime()).filter(Number.isFinite);
+  const maxUpdate = updateTimes.length ? new Date(Math.max(...updateTimes)).toISOString() : new Date().toISOString();
+  return {resultados, meta:{updated_at:maxUpdate, generated_at:maxUpdate, source:'google_sheets', played_count:playedCount(resultados)}};
+}
+async function fetchOnlineResults(fallbackResults=[]){
+  const errors=[];
+  for(const url of GOOGLE_RESULTS_CSV_URLS){
+    try{
+      const resp = await fetch(url, {cache:'no-store', mode:'cors'});
+      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      if(!text || !text.includes('game_id')) throw new Error('CSV sem cabeçalho game_id');
+      return sheetCSVToResultsPayload(text, fallbackResults);
+    }catch(err){
+      errors.push(err.message || String(err));
+    }
+  }
+  console.warn('Planilha online de resultados indisponível. Usando JSON local.', errors);
+  return null;
+}
+
 function playedCount(results){ return (results || []).filter(isPlayed).length; }
 function maxResultUpdatedAt(results){
   const dates = (results || [])
@@ -91,6 +243,18 @@ async function loadData(){
         DATA[f] = payload;
       }
     }
+    // V17: fonte principal de resultados passa a ser a planilha pública do Google Sheets.
+    // O data/resultados.json fica como fallback de segurança caso a planilha esteja indisponível.
+    try{
+      const online = await fetchOnlineResults(DATA.resultados);
+      if(online?.resultados?.length){
+        DATA.resultados = online.resultados;
+        resultsMeta = online.meta || {};
+        DATA.resultados_meta = resultsMeta;
+        resultsSource = 'Planilha online de resultados';
+      }
+    }catch(e){ console.warn('Falha ao carregar planilha online de resultados', e); }
+
     // V9: o site público NÃO usa simulação local por padrão. Isso evita que um localStorage antigo
     // mascare o data/resultados.json publicado no GitHub. A simulação só entra com ?simulacao=1.
     if(CLEAR_LOCAL_SIMULATION){

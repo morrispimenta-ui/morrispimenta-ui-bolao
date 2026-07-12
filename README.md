@@ -1,16 +1,19 @@
-# Bolão Copa 2026 — V16
+# Bolão Copa 2026 · GitHub Pages
 
-Versão pública para GitHub Pages.
+Versão V17.
 
-## Ajustes V16
+## Atualização de resultados
 
-- Corrige o menu inferior da versão mobile com navegação por delegação de evento e grid de 6 itens.
-- Adiciona Lionel Messi como opção extra no simulador de artilheiro, sem alterar apostas reais nem pontuação oficial.
-- Mantém o motor oficial de cálculo sem alteração.
-- Mantém o placar exato no mata-mata como bônus de 3 pontos.
+O site agora lê os resultados preferencialmente da planilha pública do Google Sheets:
+
+https://docs.google.com/spreadsheets/d/1Hmc6uddrpJMHdUZPOdOcT-ylt4gmdaUr/edit
+
+A aba usada é `resultados`. O arquivo `data/resultados.json` permanece no pacote apenas como fallback caso a planilha esteja temporariamente indisponível.
 
 ## Publicação
 
-Suba todo o conteúdo desta pasta na raiz do repositório do GitHub Pages.
+Suba todo o conteúdo deste pacote na raiz do repositório do GitHub Pages.
 
-O arquivo `index.html` deve ficar na raiz.
+## Atenção
+
+A planilha precisa estar acessível para leitura pública ou publicada na web. A área pública não exibe instruções administrativas; mostra apenas data/hora da última atualização e dados do bolão.
