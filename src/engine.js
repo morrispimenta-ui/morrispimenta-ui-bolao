@@ -52,29 +52,44 @@ export function normalizeGame(g, teams=[]){
   return g;
 }
 function loserOf(g){ if(!g?.home || !g?.away || !g?.advancer) return null; return g.advancer===g.home ? g.away : g.home; }
-function setMatchIfNeeded(byId, gameId, home, away, teams=[]){
-  const g=byId[gameId]; if(!g || !home || !away) return false;
-  if(!g.home || !g.away){
+function clearPendingMatch(g){
+  if(!g || isPlayed(g)) return;
+  g.home=null; g.away=null; g.home_name='A definir'; g.away_name='A definir';
+  g.home_goals=null; g.away_goals=null; g.score=null; g.winner=null; g.advancer=null;
+}
+function forceBracketMatch(byId, gameId, home, away, teams=[]){
+  const g=byId[gameId]; if(!g) return false;
+  // Jogos já oficializados preservam placar/status; a origem dos times vem da própria partida oficial.
+  // Jogos pendentes precisam sempre obedecer à chave calculada, evitando que uma planilha com valores
+  // antigos ou fórmulas de fase futura bagunce próximos jogos e simulador.
+  if(!home || !away){ clearPendingMatch(g); return false; }
+  if(!isPlayed(g)){
     g.home=home; g.away=away; g.home_name=teamName(home, teams); g.away_name=teamName(away, teams);
     if(g.advancer && ![home, away].includes(g.advancer)) g.advancer=null;
-    return true;
+    if(g.winner && ![home, away, 'EMP'].includes(g.winner)) g.winner=null;
+  }else{
+    g.home_name=teamName(g.home, teams); g.away_name=teamName(g.away, teams);
   }
-  return false;
+  return true;
 }
 export function prepareResults(resultados, teams=[]){
   const out=cloneResults(resultados);
   const byId=Object.fromEntries(out.map(g=>[g.game_id,g]));
   out.forEach(g=>normalizeGame(g, teams));
-  // Chave fixa da Copa simulada: permite que o site público mostre automaticamente semifinais/final
-  // quando o resultados.json publicado já contiver os classificados das fases anteriores.
-  setMatchIfNeeded(byId,97, byId[89]?.advancer, byId[90]?.advancer, teams);
-  setMatchIfNeeded(byId,98, byId[91]?.advancer, byId[92]?.advancer, teams);
-  setMatchIfNeeded(byId,99, byId[93]?.advancer, byId[94]?.advancer, teams);
-  setMatchIfNeeded(byId,100,byId[95]?.advancer, byId[96]?.advancer, teams);
-  setMatchIfNeeded(byId,101,byId[97]?.advancer, byId[98]?.advancer, teams);
-  setMatchIfNeeded(byId,102,byId[99]?.advancer, byId[100]?.advancer, teams);
-  setMatchIfNeeded(byId,104,byId[101]?.advancer, byId[102]?.advancer, teams);
-  setMatchIfNeeded(byId,103,loserOf(byId[101]), loserOf(byId[102]), teams);
+
+  // Chave oficial derivada. O placar vem da planilha/JSON; os confrontos futuros vêm dos classificados
+  // já definidos. Isso evita que linhas futuras da planilha sobrescrevam a chave real.
+  forceBracketMatch(byId,97, byId[89]?.advancer, byId[90]?.advancer, teams);
+  forceBracketMatch(byId,98, byId[93]?.advancer, byId[94]?.advancer, teams);
+  forceBracketMatch(byId,99, byId[91]?.advancer, byId[92]?.advancer, teams);
+  forceBracketMatch(byId,100,byId[95]?.advancer, byId[96]?.advancer, teams);
+
+  // Rodadas posteriores: só aparecem como jogo real quando os dois classificados anteriores existem.
+  // Caso contrário, ficam A definir e não entram na lista de próximos jogos.
+  forceBracketMatch(byId,101,byId[97]?.advancer, byId[98]?.advancer, teams);
+  forceBracketMatch(byId,102,byId[99]?.advancer, byId[100]?.advancer, teams);
+  forceBracketMatch(byId,104,byId[101]?.advancer, byId[102]?.advancer, teams);
+  forceBracketMatch(byId,103,loserOf(byId[101]), loserOf(byId[102]), teams);
   out.forEach(g=>normalizeGame(g, teams));
   return out;
 }

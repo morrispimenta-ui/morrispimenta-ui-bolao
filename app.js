@@ -501,14 +501,32 @@ function groupGamePoints(id){ return (detailsByEntry[id]?.group_predictions||[])
 function gamesPlayedByPhase(phase){ return DATA.resultados.filter(g=>g.phase===phase && isPlayed(g)).length; }
 function phasesWithResults(){ return ['Fase de Grupos', ...koPhases].filter(ph => ph==='Fase de Grupos' ? gamesPlayedByPhase(ph)>0 : gamesPlayedByPhase(ph)>0); }
 
+
+const phaseOrderPublic = ['Fase de Grupos','Rodada de 32','Oitavas de Final','Quartas de Final','Semifinais','3º Lugar','Final'];
+function hasKnownTeams(g){ return !!(g && g.home && g.away); }
+function publicPendingGames(){
+  const pending = (DATA.resultados || []).filter(g => isPending(g) && hasKnownTeams(g)).sort((a,b)=>a.game_id-b.game_id);
+  if(!pending.length) return [];
+  const firstIdx = Math.min(...pending.map(g => {
+    const idx = phaseOrderPublic.indexOf(g.phase);
+    return idx >= 0 ? idx : 99;
+  }));
+  // Na tela inicial, mostra só a fase pendente mais próxima. Fases futuras derivadas da chave
+  // continuam disponíveis no simulador/resultados, mas não aparecem como “próximos jogos”.
+  return pending.filter(g => {
+    const idx = phaseOrderPublic.indexOf(g.phase);
+    return (idx >= 0 ? idx : 99) === firstIdx;
+  });
+}
+
 function renderHome(){
-  const ranking = CALC.ranking, pending = DATA.resultados.filter(isPending).sort((a,b)=>a.game_id-b.game_id), played = DATA.resultados.filter(isPlayed).length;
+  const ranking = CALC.ranking, allPending = DATA.resultados.filter(isPending).sort((a,b)=>a.game_id-b.game_id), nextPending = publicPendingGames(), played = DATA.resultados.filter(isPlayed).length;
   const mostExact = [...ranking].sort((a,b)=>b.cravadas-a.cravadas || a.posicao-b.posicao)[0];
   $('podium').innerHTML = ranking.slice(0,3).map((r,i)=>`<div class="podium-card podium-${i+1}"><div class="podium-pos">${i===0?'🥇':i===1?'🥈':'🥉'}</div><div><div class="podium-name">${esc(r.display_name)}</div><span class="podium-meta">${r.grupos} grupos · ${r.mata_mata} mata-mata · ${cravadasGrupo(r)}+${cravadasMata(r)} 🎯</span></div><div class="podium-points">${r.total}</div></div>`).join('');
-  const st=liveStats(); const kpis = [['Participantes', st.valid, 'apostas consideradas'], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', pending.length, pending[0] ? `próximo jogo: #${pending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${cravadasTotal(mostExact) || 0} cravadas totais`], ['Última atualização', lastUpdated(), `${played} jogos concluídos`]];
+  const st=liveStats(); const kpis = [['Participantes', st.valid, 'apostas consideradas'], ['Jogos cadastrados', DATA.resultados.length, `${played} concluídos`], ['Jogos pendentes', allPending.length, nextPending[0] ? `próximo jogo: #${nextPending[0].game_id}` : 'sem pendências'], ['Líder atual', ranking[0]?.display_name || '—', `${ranking[0]?.total || 0} pontos`], ['Mais cravadas', mostExact?.display_name || '—', `${cravadasTotal(mostExact) || 0} cravadas totais`], ['Última atualização', lastUpdated(), `${played} jogos concluídos`]];
   $('kpis').innerHTML = kpis.map(([label,value,sub])=>`<div class="kpi"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></div>`).join('');
   $('homeTop10').innerHTML = ranking.slice(0,10).map(rankItem).join('');
-  $('pendingGamesHome').innerHTML = pending.slice(0,8).map(gameRow).join('') || `<div class="empty-state">Nenhum jogo pendente.</div>`;
+  $('pendingGamesHome').innerHTML = nextPending.slice(0,8).map(gameRow).join('') || `<div class="empty-state">Nenhum próximo jogo pendente com confronto definido.</div>`;
   bindOpeners();
 }
 function rankItem(r){ const medal = r.posicao===1?'🥇':r.posicao===2?'🥈':r.posicao===3?'🥉':r.posicao; return `<div class="rank-item"><div class="rank-badge">${medal}</div><div><button class="participant-btn" data-open-entry="${r.entry_id}">${esc(r.display_name)}</button><span>${r.grupos} grupos · ${r.mata_mata} mata-mata · ${cravadasGrupo(r)} grupos + ${cravadasMata(r)} mata</span></div><div class="rank-score">${r.total}</div></div>`; }

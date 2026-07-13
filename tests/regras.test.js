@@ -109,3 +109,14 @@ assert.ok(simulated.ranking.every(r => Number.isFinite(r.total_simulado) && Numb
 const simResults = buildSimulatedResults(data.resultados, data.times, simChoices);
 assert.equal(simResults.find(g=>g.game_id===99).status, 'Simulado', 'jogo pendente deve poder virar simulado');
 assert.equal(simResults.find(g=>g.game_id===97).status, 'Finalizado', 'jogo oficial já finalizado não pode ser sobrescrito pela simulação');
+
+// V18: a planilha pode trazer confrontos futuros preenchidos/defasados. O motor deve derivar a chave
+// pelos classificados oficiais e limpar jogos futuros que ainda não têm os dois classificados definidos.
+const staleFuture = structuredClone(resultadosArray);
+const sg101 = staleFuture.find(g=>g.game_id===101);
+sg101.home='BRA'; sg101.away='ARG'; sg101.home_name='Brasil'; sg101.away_name='Argentina'; sg101.status='Pendente'; sg101.home_goals=null; sg101.away_goals=null; sg101.score=null; sg101.advancer=null;
+const preparedStale = prepareResults(staleFuture, data.times);
+assert.equal(preparedStale.find(g=>g.game_id===101).home, 'FRA', 'jogo #101 pendente deve obedecer à chave: vencedor #97 x vencedor #98');
+assert.equal(preparedStale.find(g=>g.game_id===101).away, 'ESP', 'jogo #101 pendente deve obedecer à chave: vencedor #97 x vencedor #98');
+assert.equal(preparedStale.find(g=>g.game_id===102).home, null, 'jogo #102 ainda deve ficar A definir enquanto #99/#100 não terminarem');
+assert.equal(preparedStale.find(g=>g.game_id===104).home, null, 'final deve ficar A definir enquanto semifinais não terminarem');
