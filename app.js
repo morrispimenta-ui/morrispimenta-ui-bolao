@@ -985,18 +985,30 @@ function renderSimBracket(sim){
     };
   });
   box.querySelectorAll('[data-sim-home],[data-sim-away]').forEach(inp=>{
-    inp.onchange = ()=>{
+    const storePartialScore = ()=>{
       const card=inp.closest('.sim-game-card'), gameId=card?.dataset.gameId;
       if(!gameId) return;
       const g=gameByIdFrom(SIM_CALC?.resultados,gameId);
-      const current = SIM_CHOICES[simChoiceKey(gameId)] || {};
-      const hg=card.querySelector('[data-sim-home]')?.value;
-      const ag=card.querySelector('[data-sim-away]')?.value;
-      let adv=current.advancer;
-      if(hg!=='' && ag!=='' && Number(hg)!==Number(ag) && g?.home && g?.away) adv = Number(hg)>Number(ag) ? g.home : g.away;
-      if(hg!=='' && ag!=='' && adv) SIM_CHOICES[simChoiceKey(gameId)] = { home_goals:hg, away_goals:ag, advancer:adv };
-      updateSimulator();
+      const key=simChoiceKey(gameId);
+      const current = SIM_CHOICES[key] || {};
+      const hg=card.querySelector('[data-sim-home]')?.value ?? '';
+      const ag=card.querySelector('[data-sim-away]')?.value ?? '';
+      let adv=current.advancer || null;
+      // Se o placar não for empate, o classificado é determinado naturalmente pelo placar.
+      // Se empatar, preserva a escolha do botão, pois representa pênaltis.
+      if(hg!=='' && ag!=='' && Number(hg)!==Number(ag) && g?.home && g?.away){
+        adv = Number(hg)>Number(ag) ? g.home : g.away;
+      }
+      // V22: guardar também placares parciais. Antes, ao digitar apenas um campo,
+      // a re-renderização apagava o número porque a escolha ainda não tinha classificado.
+      if(hg!=='' || ag!=='' || adv){
+        SIM_CHOICES[key] = { home_goals:hg, away_goals:ag, advancer:adv };
+      }else{
+        delete SIM_CHOICES[key];
+      }
     };
+    inp.oninput = storePartialScore;
+    inp.onchange = ()=>{ storePartialScore(); updateSimulator(); };
   });
 }
 function simGameCard(g){
