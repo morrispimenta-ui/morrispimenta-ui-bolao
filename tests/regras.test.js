@@ -26,6 +26,18 @@ assert.equal(miniRank.total,13,'soma do mata-mata deve bater: 5+5+3');
 assert.equal(miniRank.cravadas,0,'bônus de placar exato no mata-mata não entra na coluna de cravadas oficiais');
 assert.equal(miniRank.placares_exatos_mata_mata,1,'bônus de placar exato do mata-mata deve ficar em coluna própria');
 
+// V20: na final, não existe ponto de avanço do campeão; esse item é remunerado pelo bônus final.
+const miniFinal={
+  resultados:[{game_id:104,phase:'Final',home:'ESP',away:'ARG',home_goals:2,away_goals:1,score:'2x1',status:'Finalizado',winner:'ESP',advancer:'ESP'}],
+  participantes:[{entry_id:2,name:'Teste Final',bet_number:1,display_name:'Teste Final #1',valid:true,finals:{campeao:'Espanha'}}],
+  apostas_detalhes:{'2':{entry_id:2,display_name:'Teste Final #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[{game_id:104,prediction_match:'ESP x ARG',prediction_score:'2x1',predicted_winner:'ESP'}]}}
+};
+const miniFinalRank=calculate(structuredClone(miniFinal)).ranking[0];
+assert.equal(miniFinalRank.ko_confronto,5,'confronto correto na final deve valer 5');
+assert.equal(miniFinalRank.ko_avanco,0,'vencedor da final não deve gerar +5 de avanço; campeão é bônus final');
+assert.equal(miniFinalRank.ko_placar,3,'placar exato na final deve valer +3 de bônus de placar');
+assert.equal(miniFinalRank.total,8,'final deve somar confronto + placar, sem avanço: 5+3');
+
 // Regressão do ranking publicado: pontos e posições não podem mudar sem regra explícita.
 const expected=read('ranking');
 const result=calculate(structuredClone(data)).ranking;
@@ -109,6 +121,32 @@ assert.ok(simulated.ranking.every(r => Number.isFinite(r.total_simulado) && Numb
 const simResults = buildSimulatedResults(data.resultados, data.times, simChoices);
 assert.equal(simResults.find(g=>g.game_id===99).status, 'Simulado', 'jogo pendente deve poder virar simulado');
 assert.equal(simResults.find(g=>g.game_id===97).status, 'Finalizado', 'jogo oficial já finalizado não pode ser sobrescrito pela simulação');
+
+// V20: o simulador exige placar. Escolher só classificado não deve simular o jogo.
+const noScoreChoices = {
+  99:{advancer:'ENG'},
+  100:{advancer:'ARG'},
+  101:{advancer:'FRA'},
+  102:{advancer:'ARG'},
+  103:{advancer:'FRA'},
+  104:{advancer:'FRA'}
+};
+const noScoreResults = buildSimulatedResults(data.resultados, data.times, noScoreChoices);
+const g99NoScore = noScoreResults.find(g=>g.game_id===99);
+assert.equal(g99NoScore?.status, 'Pendente', 'sem placar, o jogo pendente não deve virar simulado');
+assert.equal(g99NoScore?.score, null, 'sem placar, o simulador não pode criar placar técnico');
+// Participante teste que apostou num placar qualquer não pode ganhar ponto em jogo não simulado.
+const noScoreMiniData = structuredClone(data);
+noScoreMiniData.participantes = [{entry_id:999,name:'Teste Sim',bet_number:1,display_name:'Teste Sim #1',valid:true,finals:{}}];
+noScoreMiniData.apostas_detalhes = {'999':{entry_id:999,display_name:'Teste Sim #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[{game_id:99,prediction_match:`${g99NoScore.home} x ${g99NoScore.away}`,prediction_score:'1x0',predicted_winner:g99NoScore.home}]}};
+const noScoreRank = calculate({...noScoreMiniData, resultados:noScoreResults}).ranking[0];
+assert.equal(noScoreRank.total,0,'sem placar lançado no simulador, não há pontos simulados para aquele jogo');
+const withScoreChoices = {...noScoreChoices, 99:{home_goals:1, away_goals:2, advancer:'ENG'}};
+const withScoreResults = buildSimulatedResults(data.resultados, data.times, withScoreChoices);
+const g99WithScore = withScoreResults.find(g=>g.game_id===99);
+assert.equal(g99WithScore?.status, 'Simulado', 'com placar e classificado coerentes, o jogo deve virar simulado');
+const withScoreRank = calculate({...noScoreMiniData, resultados:withScoreResults}).ranking[0];
+assert.equal(withScoreRank.ko_placar,0,'placar diferente não gera bônus de placar exato');
 
 // V18: a planilha pode trazer confrontos futuros preenchidos/defasados. O motor deve derivar a chave
 // pelos classificados oficiais e limpar jogos futuros que ainda não têm os dois classificados definidos.

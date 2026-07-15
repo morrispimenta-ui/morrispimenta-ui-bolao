@@ -25,20 +25,18 @@ function setGameSimulated(g, choice, times=[]){
   if(!g || !c || !g.home || !g.away || !c.advancer || ![g.home, g.away].includes(c.advancer)) return false;
   let hg = c.home_goals;
   let ag = c.away_goals;
-  if(hg == null || ag == null){
-    if(c.advancer === g.home){ hg = 1; ag = 0; }
-    else { hg = 0; ag = 1; }
-  }
+  const explicitScore = hg != null && ag != null;
+  // Regra V20: o simulador exige placar para jogos pendentes, porque o placar pode
+  // gerar bônus de +3 no mata-mata e alterar a classificação simulada do bolão.
+  // Sem placar, o jogo não é simulado.
+  if(!explicitScore) return false;
   if(hg === ag){
-    // empate permitido; classificado define avanço. winner fica null, advancer preservado.
+    // empate permitido; classificado define avanço por pênaltis. winner fica null.
     g.winner = null;
   } else {
     const naturalWinner = hg > ag ? g.home : g.away;
-    // se placar contradiz classificado, ajusta para um placar simples coerente.
-    if(naturalWinner !== c.advancer){
-      if(c.advancer === g.home){ hg = Math.max(hg, ag + 1); }
-      else { ag = Math.max(ag, hg + 1); }
-    }
+    // Placar sem empate não pode contradizer o classificado escolhido.
+    if(naturalWinner !== c.advancer) return false;
     g.winner = c.advancer;
   }
   g.home_goals = hg;
@@ -49,6 +47,8 @@ function setGameSimulated(g, choice, times=[]){
   g.home_name = teamName(g.home, times);
   g.away_name = teamName(g.away, times);
   g.simulated = true;
+  g.score_placeholder = false;
+  g.simulated_without_score = false;
   return true;
 }
 

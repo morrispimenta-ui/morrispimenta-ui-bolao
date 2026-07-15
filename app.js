@@ -905,7 +905,9 @@ function renderSimStatus(){
   const box = $('simStatus'); if(!box) return;
   if(!simHasAnyChoice()) box.textContent = 'Escolha os vencedores dos confrontos pendentes para ver como o bolão pode mudar.';
   else if(!simIsComplete()) box.textContent = 'Complete os confrontos pendentes para projetar campeão, vice, terceiro e quarto.';
-  else box.textContent = 'Cenário completo simulado. Esta projeção não altera o ranking oficial.';
+  else {
+    box.textContent = 'Cenário completo simulado. Esta projeção não altera o ranking oficial.';
+  }
 }
 function renderSimRanking(sim){
   const container = $('simRanking'); if(!container || !sim) return;
@@ -963,6 +965,21 @@ function renderSimBracket(sim){
       const card=btn.closest('.sim-game-card');
       const hg=card?.querySelector('[data-sim-home]')?.value;
       const ag=card?.querySelector('[data-sim-away]')?.value;
+      if(hg==='' || ag===''){
+        card?.classList.add('needs-score');
+        toast('Informe o placar antes de escolher o classificado. O placar pode mudar o bolão.', true);
+        return;
+      }
+      const g=gameByIdFrom(SIM_CALC?.resultados,gameId);
+      const h=Number(hg), a=Number(ag);
+      if(Number.isFinite(h) && Number.isFinite(a) && h!==a){
+        const natural = h>a ? g?.home : g?.away;
+        if(natural && adv !== natural){
+          toast('O classificado escolhido precisa bater com o placar. Em caso de pênaltis, lance um empate.', true);
+          return;
+        }
+      }
+      card?.classList.remove('needs-score');
       SIM_CHOICES[simChoiceKey(gameId)] = { home_goals:hg, away_goals:ag, advancer:adv };
       updateSimulator();
     };
@@ -977,7 +994,7 @@ function renderSimBracket(sim){
       const ag=card.querySelector('[data-sim-away]')?.value;
       let adv=current.advancer;
       if(hg!=='' && ag!=='' && Number(hg)!==Number(ag) && g?.home && g?.away) adv = Number(hg)>Number(ag) ? g.home : g.away;
-      if(adv) SIM_CHOICES[simChoiceKey(gameId)] = { home_goals:hg, away_goals:ag, advancer:adv };
+      if(hg!=='' && ag!=='' && adv) SIM_CHOICES[simChoiceKey(gameId)] = { home_goals:hg, away_goals:ag, advancer:adv };
       updateSimulator();
     };
   });
@@ -990,10 +1007,13 @@ function simGameCard(g){
   const choice = SIM_CHOICES[simChoiceKey(g.game_id)] || {};
   const status = official ? 'oficial' : simulated ? 'simulado' : 'pendente';
   const canEdit = !official && g.home && g.away;
+  const homeValue = choice.home_goals ?? (isPlayed(g) && !g.score_placeholder ? g.home_goals : '');
+  const awayValue = choice.away_goals ?? (isPlayed(g) && !g.score_placeholder ? g.away_goals : '');
+  const noScoreNote = canEdit ? '<div class="sim-note">Informe o placar e depois escolha o classificado. Se empatar, o botão escolhido representa quem passou nos pênaltis.</div>' : '';
   return `<article class="sim-game-card ${status}" data-game-id="${g.game_id}">
     <div class="sim-game-top"><span class="match-no">#${g.game_id}</span><b>${phaseLabel(g.phase)}</b><span class="pill ${official?'good':simulated?'warn':'neutral'}">${status}</span></div>
-    <div class="sim-match-row"><div>${team(g.home,true)}</div><input ${canEdit?'':'disabled'} data-sim-home type="number" min="0" value="${esc(choice.home_goals ?? (isPlayed(g)?g.home_goals:''))}" aria-label="gols mandante"/><span>x</span><input ${canEdit?'':'disabled'} data-sim-away type="number" min="0" value="${esc(choice.away_goals ?? (isPlayed(g)?g.away_goals:''))}" aria-label="gols visitante"/><div>${team(g.away,true)}</div></div>
-    ${g.advancer ? `<div class="sim-advancer">avança ${team(g.advancer,true)}</div>` : ''}
+    <div class="sim-match-row"><div>${team(g.home,true)}</div><input ${canEdit?'':'disabled'} data-sim-home type="number" min="0" value="${esc(homeValue)}" placeholder="gols" aria-label="gols mandante"/><span>x</span><input ${canEdit?'':'disabled'} data-sim-away type="number" min="0" value="${esc(awayValue)}" placeholder="gols" aria-label="gols visitante"/><div>${team(g.away,true)}</div></div>
+    ${g.advancer ? `<div class="sim-advancer">avança ${team(g.advancer,true)}</div>` : ''}${noScoreNote}
     <div class="sim-choice-row">
       <button class="btn tiny ${g.advancer===g.home?'primary':''}" ${canEdit?'':'disabled'} data-game-id="${g.game_id}" data-sim-winner="${esc(g.home||'')}">${g.home?`Avança ${teamName(g.home)}`:'A definir'}</button>
       <button class="btn tiny ${g.advancer===g.away?'primary':''}" ${canEdit?'':'disabled'} data-game-id="${g.game_id}" data-sim-winner="${esc(g.away||'')}">${g.away?`Avança ${teamName(g.away)}`:'A definir'}</button>
@@ -1028,7 +1048,7 @@ function copySimulationScenario(){
   navigator.clipboard?.writeText(text).then(()=>toast('Cenário copiado.'),()=>toast('Não foi possível copiar automaticamente.', true));
 }
 
-function renderRules(){ const r=DATA.regras, audit=auditInternal(); $('rulesGrid').innerHTML = `<article><strong>Fase de grupos</strong><p>Placar exato/cravada: <b>${r.fase_grupos.placar_exato}</b> pontos. Vencedor ou empate correto: <b>${r.fase_grupos.vencedor_ou_empate}</b> pontos. A cravada substitui o acerto simples.</p></article><article><strong>Classificados aos 1/16 avos</strong><p>Cada seleção corretamente classificada vale <b>${r.classificados_grupos.por_selecao_classificada}</b> pontos. A ordem no grupo não importa.</p></article><article><strong>Mata-mata</strong><p>Confronto correto: <b>${r.mata_mata.confronto_correto}</b>. Seleção que avança: <b>${r.mata_mata.avanco_por_fase}</b>. Placar exato vale <b>${r.mata_mata.placar_exato_bonus}</b> pontos, não 5, e exige confronto + classificado correto.</p></article><article><strong>Bônus finais</strong><p>Campeão: <b>${r.bonus_finais.campeao}</b>. Vice: <b>${r.bonus_finais.vice}</b>. 3º lugar: <b>${r.bonus_finais.terceiro}</b>. 4º lugar: <b>${r.bonus_finais.quarto}</b>. Artilheiro: <b>${r.bonus_finais.artilheiro}</b>.</p></article><article><strong>Desempate</strong><p>${(r.desempate||[]).map(esc).join(' → ') || 'Não informado nos dados.'}</p></article><article><strong>Conferência</strong><p>Compare Ranking, Palpites e Resultados para entender cada ponto.</p></article>`; }
+function renderRules(){ const r=DATA.regras, audit=auditInternal(); $('rulesGrid').innerHTML = `<article><strong>Fase de grupos</strong><p>Placar exato/cravada: <b>${r.fase_grupos.placar_exato}</b> pontos. Vencedor ou empate correto: <b>${r.fase_grupos.vencedor_ou_empate}</b> pontos. A cravada substitui o acerto simples.</p></article><article><strong>Classificados aos 1/16 avos</strong><p>Cada seleção corretamente classificada vale <b>${r.classificados_grupos.por_selecao_classificada}</b> pontos. A ordem no grupo não importa.</p></article><article><strong>Mata-mata</strong><p>Confronto correto: <b>${r.mata_mata.confronto_correto}</b>. Seleção que avança nas fases eliminatórias: <b>${r.mata_mata.avanco_por_fase}</b>. Na final, o campeão não gera +5 de avanço; a pontuação vem pelo bônus final. Placar exato vale <b>${r.mata_mata.placar_exato_bonus}</b> pontos, não 5, e exige confronto + classificado correto.</p></article><article><strong>Bônus finais</strong><p>Campeão: <b>${r.bonus_finais.campeao}</b>. Vice: <b>${r.bonus_finais.vice}</b>. 3º lugar: <b>${r.bonus_finais.terceiro}</b>. 4º lugar: <b>${r.bonus_finais.quarto}</b>. Artilheiro: <b>${r.bonus_finais.artilheiro}</b>.</p></article><article><strong>Desempate</strong><p>${(r.desempate||[]).map(esc).join(' → ') || 'Não informado nos dados.'}</p></article><article><strong>Conferência</strong><p>Compare Ranking, Palpites e Resultados para entender cada ponto.</p></article>`; }
 
 function badge(status){ const s=String(status||'pendente').toLowerCase(); const cls=s.includes('exato')||s.includes('correto')||s.includes('classificado')?'good':s.includes('erro')?'bad':'warn'; return `<span class="pill ${cls}">${esc(status||'pendente')}</span>`; }
 function badgeText(status){ return String(status||'pendente'); }

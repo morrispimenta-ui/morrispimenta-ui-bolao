@@ -1,0 +1,16 @@
+{
+  "versao": "V21",
+  "regra_auditada": "Final nao gera ponto de avanco; campeao e remunerado exclusivamente pelo bonus final de campeao.",
+  "regra_preservada": {
+    "final_confronto_correto": 5,
+    "final_placar_exato_bonus": 3,
+    "final_avanco_campeao": 0,
+    "bonus_campeao": 70,
+    "bonus_vice": 50,
+    "bonus_terceiro": 30,
+    "bonus_quarto": 10,
+    "bonus_artilheiro": 40
+  },
+  "status": "Motor oficial e simulador auditados para nao computar +5 de avanco na final.",
+  "ranking_oficial_atual": "Sem divergencias na base atual; a regra so afeta cenarios futuros quando a final for concluida/simulada."
+}

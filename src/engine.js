@@ -21,6 +21,10 @@ export function scoreGroup(pred,result){
   return {points:0,status:'erro'};
 }
 export function alignedExact(predPair,predScore,game){
+  // No simulador, quando o usuário escolhe apenas o classificado sem preencher placar,
+  // o sistema cria um placar técnico só para permitir avanço/confronto. Esse placar
+  // não pode gerar bônus de placar exato. Resultados oficiais nunca usam essa marca.
+  if(game?.score_placeholder || game?.simulated_without_score) return false;
   const s=parseScore(predScore); if(!predPair || !s || !game) return false;
   const byTeam={}; byTeam[predPair[0]]=s[0]; byTeam[predPair[1]]=s[1];
   return byTeam[game.home]===game.home_goals && byTeam[game.away]===game.away_goals;
@@ -142,6 +146,11 @@ export function calculate(data){
     }
     let advancementPoints=0;
     for(const [ph,setPred] of Object.entries(predictedWinnersByPhase)){
+      // Regra V20: na final não existe mais ponto de avanço. O campeão é remunerado
+      // exclusivamente pelo bônus final de campeão. Confronto correto e placar exato
+      // da final continuam valendo quando aplicáveis, mas o vencedor da final não gera
+      // +5 de avanço/classificado.
+      if(ph === 'Final') continue;
       const actualSet=actualAdv[ph] || new Set(); const allocated=new Set();
       for(const team of setPred){ if(actualSet.has(team)) advancementPoints+=5; }
       for(const row of det.knockout_predictions||[]){
