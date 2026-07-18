@@ -166,7 +166,16 @@ function sheetCSVToResultsPayload(csvText, fallbackResults=[]){
   if(resultados.length < 80) throw new Error('Planilha de resultados incompleta ou aba incorreta.');
   const updateTimes = resultados.map(g => parseSheetDate(g.updated_at || g.resultados_json_updated_at)?.getTime()).filter(Number.isFinite);
   const maxUpdate = updateTimes.length ? new Date(Math.max(...updateTimes)).toISOString() : new Date().toISOString();
-  return {resultados, meta:{updated_at:maxUpdate, generated_at:maxUpdate, source:'google_sheets', played_count:playedCount(resultados)}};
+  // V24: a mesma aba resultados pode carregar também o artilheiro oficial.
+  // Basta preencher a coluna artilheiro_oficial (ou artilheiro/top_scorer) em qualquer linha,
+  // de preferência na linha do jogo #104 ou na primeira linha. O último valor não vazio vence.
+  const scorers = rows
+    .map(row => String(firstDefined(row.artilheiro_oficial,row.artilheiro,row.top_scorer,row.chuteira_de_ouro)).trim())
+    .filter(Boolean);
+  const artilheiro = scorers.length ? scorers[scorers.length - 1] : null;
+  const meta = {updated_at:maxUpdate, generated_at:maxUpdate, source:'google_sheets', played_count:playedCount(resultados)};
+  if(artilheiro) { meta.artilheiro_oficial = artilheiro; meta.artilheiro = artilheiro; }
+  return {resultados, meta};
 }
 async function fetchOnlineResults(fallbackResults=[]){
   const errors=[];
@@ -239,6 +248,7 @@ async function loadData(){
         DATA.resultados = unpacked.resultados;
         resultsMeta = unpacked.meta || {};
         DATA.resultados_meta = resultsMeta;
+        DATA.artilheiro_oficial = resultsMeta.artilheiro_oficial || resultsMeta.artilheiro || DATA.artilheiro_oficial || null;
       } else {
         DATA[f] = payload;
       }
@@ -251,6 +261,7 @@ async function loadData(){
         DATA.resultados = online.resultados;
         resultsMeta = online.meta || {};
         DATA.resultados_meta = resultsMeta;
+        DATA.artilheiro_oficial = resultsMeta.artilheiro_oficial || resultsMeta.artilheiro || DATA.artilheiro_oficial || null;
         resultsSource = 'Planilha online de resultados';
       }
     }catch(e){ console.warn('Falha ao carregar planilha online de resultados', e); }
@@ -273,6 +284,7 @@ async function loadData(){
           DATA.resultados = rootResults;
           resultsMeta = rootUnpacked.meta || {};
           DATA.resultados_meta = resultsMeta;
+          DATA.artilheiro_oficial = resultsMeta.artilheiro_oficial || resultsMeta.artilheiro || DATA.artilheiro_oficial || null;
           resultsSource = 'resultados.json na raiz';
         }
       }
@@ -287,6 +299,7 @@ async function loadData(){
           DATA.resultados = localResults;
           resultsMeta = localUnpacked.meta || {};
           DATA.resultados_meta = resultsMeta;
+          DATA.artilheiro_oficial = resultsMeta.artilheiro_oficial || resultsMeta.artilheiro || DATA.artilheiro_oficial || null;
           usingLocalResults = true;
           resultsSource = 'localStorage / gestao-resultados';
         }

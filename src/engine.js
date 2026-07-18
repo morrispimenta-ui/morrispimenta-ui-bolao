@@ -32,6 +32,54 @@ export function alignedExact(predPair,predScore,game){
 function normalizeResultsInput(resultados){ if(Array.isArray(resultados)) return resultados; if(resultados && Array.isArray(resultados.resultados)) return resultados.resultados; if(resultados && Array.isArray(resultados.results)) return resultados.results; return []; }
 function cloneResults(resultados){ return normalizeResultsInput(resultados).map(g=>({...g})); }
 function teamName(code, teams){ return (teams||[]).find(t=>t.code===code)?.name || code || 'A definir'; }
+function normalizeText(v){ return String(v || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function finalBonusConfig(regras={}){
+  const b = regras?.bonus_finais || {};
+  return {
+    campeao: Number(b.campeao ?? 70),
+    vice: Number(b.vice ?? 50),
+    terceiro: Number(b.terceiro ?? 30),
+    quarto: Number(b.quarto ?? 10),
+    artilheiro: Number(b.artilheiro ?? 40)
+  };
+}
+function compareFinalPrediction(predName, code, teams=[]){
+  return !!predName && !!code && normalizeText(predName) === normalizeText(teamName(code, teams));
+}
+function officialTopScorer(data={}){
+  return data.artilheiro_oficial
+    || data.artilheiro
+    || data.top_scorer
+    || data.resultados_meta?.artilheiro_oficial
+    || data.resultados_meta?.artilheiro
+    || data.resultados_meta?.top_scorer
+    || data.metadata?.artilheiro_oficial
+    || data.metadata?.artilheiro
+    || data.metadata?.top_scorer
+    || null;
+}
+export function finalPodiumFromResults(games=[]){
+  const byGame = Object.fromEntries((games || []).map(g => [Number(g.game_id), g]));
+  const final = byGame[104];
+  const third = byGame[103];
+  return {
+    campeao: isPlayed(final) ? final.advancer : null,
+    vice: isPlayed(final) ? loserOf(final) : null,
+    terceiro: isPlayed(third) ? third.advancer : null,
+    quarto: isPlayed(third) ? loserOf(third) : null
+  };
+}
+export function finalBonusForFinals(finals={}, podium={}, artilheiro=null, teams=[], regras={}){
+  const cfg = finalBonusConfig(regras);
+  const items = {
+    campeao: compareFinalPrediction(finals.campeao, podium.campeao, teams) ? cfg.campeao : 0,
+    vice: compareFinalPrediction(finals.vice, podium.vice, teams) ? cfg.vice : 0,
+    terceiro: compareFinalPrediction(finals.terceiro, podium.terceiro, teams) ? cfg.terceiro : 0,
+    quarto: compareFinalPrediction(finals.quarto, podium.quarto, teams) ? cfg.quarto : 0,
+    artilheiro: artilheiro && normalizeText(finals.artilheiro) === normalizeText(artilheiro) ? cfg.artilheiro : 0
+  };
+  return { ...items, total: Object.values(items).reduce((sum, n) => sum + Number(n || 0), 0) };
+}
 export function normalizeGame(g, teams=[]){
   if(!g) return g;
   if(g.home === '') g.home = null;
@@ -112,6 +160,8 @@ export function calculate(data){
   const actualQualified=new Set();
   for(let gid=73;gid<=88;gid++){ const g=gamesById[gid]; if(g?.home&&g?.away){actualQualified.add(g.home);actualQualified.add(g.away);} }
   const actualAdv=actualAdvancersByPhase(resultados);
+  const podium=finalPodiumFromResults(resultados);
+  const artilheiroOficial=officialTopScorer(data);
   const details={}; const ranking=[];
   for(const p of (data.participantes||[]).filter(x=>x.valid)){
     const det=structuredClone(data.apostas_detalhes?.[p.entry_id] || {group_predictions:[],knockout_predictions:[],predicted_qualified:[],finals:{}});
@@ -163,9 +213,13 @@ export function calculate(data){
     }
     for(const row of det.knockout_predictions||[]) row.points=(row.points_confronto||0)+(row.points_avanco||0)+(row.points_placar||0);
     const mata=confrontationPoints+advancementPoints+exactBonusPoints;
-    const total=groupPoints+classifiedPoints+mata;
+    const finalBonus=finalBonusForFinals(p.finals || {}, podium, artilheiroOficial, data.times || [], data.regras || {});
+    const bonus=finalBonus.total;
+    const total=groupPoints+classifiedPoints+mata+bonus;
+    det.final_bonus_detail = finalBonus;
+    det.final_podium = podium;
     details[p.entry_id]=det;
-    ranking.push({entry_id:p.entry_id,name:p.name,bet_number:p.bet_number,display_name:p.display_name,total,grupos:groupPoints+classifiedPoints,grupos_jogos:groupPoints,classificados:classifiedPoints,mata_mata:mata,ko_confronto:confrontationPoints,ko_avanco:advancementPoints,ko_placar:exactBonusPoints,bonus:0,cravadas:groupExact,cravadas_grupo:groupExact,placares_exatos_mata_mata:koCravadas,cravadas_mata_mata:koCravadas,classificados_acertos:classifiedHits.length,finals:p.finals});
+    ranking.push({entry_id:p.entry_id,name:p.name,bet_number:p.bet_number,display_name:p.display_name,total,grupos:groupPoints+classifiedPoints,grupos_jogos:groupPoints,classificados:classifiedPoints,mata_mata:mata,ko_confronto:confrontationPoints,ko_avanco:advancementPoints,ko_placar:exactBonusPoints,bonus,bonus_final_detalhe:finalBonus,cravadas:groupExact,cravadas_grupo:groupExact,placares_exatos_mata_mata:koCravadas,cravadas_mata_mata:koCravadas,classificados_acertos:classifiedHits.length,finals:p.finals});
   }
   ranking.sort((a,b)=>b.total-a.total || b.cravadas-a.cravadas || a.display_name.localeCompare(b.display_name,'pt-BR'));
   ranking.forEach((r,i)=>r.posicao=i+1);

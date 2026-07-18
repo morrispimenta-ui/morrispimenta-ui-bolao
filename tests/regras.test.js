@@ -30,13 +30,68 @@ assert.equal(miniRank.placares_exatos_mata_mata,1,'bônus de placar exato do mat
 const miniFinal={
   resultados:[{game_id:104,phase:'Final',home:'ESP',away:'ARG',home_goals:2,away_goals:1,score:'2x1',status:'Finalizado',winner:'ESP',advancer:'ESP'}],
   participantes:[{entry_id:2,name:'Teste Final',bet_number:1,display_name:'Teste Final #1',valid:true,finals:{campeao:'Espanha'}}],
-  apostas_detalhes:{'2':{entry_id:2,display_name:'Teste Final #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[{game_id:104,prediction_match:'ESP x ARG',prediction_score:'2x1',predicted_winner:'ESP'}]}}
+  apostas_detalhes:{'2':{entry_id:2,display_name:'Teste Final #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[{game_id:104,prediction_match:'ESP x ARG',prediction_score:'2x1',predicted_winner:'ESP'}]}},
+  times: data.times,
+  regras: data.regras
 };
 const miniFinalRank=calculate(structuredClone(miniFinal)).ranking[0];
 assert.equal(miniFinalRank.ko_confronto,5,'confronto correto na final deve valer 5');
 assert.equal(miniFinalRank.ko_avanco,0,'vencedor da final não deve gerar +5 de avanço; campeão é bônus final');
 assert.equal(miniFinalRank.ko_placar,3,'placar exato na final deve valer +3 de bônus de placar');
-assert.equal(miniFinalRank.total,8,'final deve somar confronto + placar, sem avanço: 5+3');
+assert.equal(miniFinalRank.bonus,70,'campeão correto deve receber o bônus final de 70 pontos quando a final estiver concluída');
+assert.equal(miniFinalRank.total,78,'final deve somar confronto + placar + bônus de campeão, sem avanço: 5+3+70');
+
+// V24: quando a final terminar, campeão e vice precisam ser creditados, e o artilheiro
+// precisa vir da fonte de resultados/metadados sem depender de alteração manual no código.
+const miniFinalComplete={
+  resultados:[{game_id:104,phase:'Final',home:'ESP',away:'ARG',home_goals:4,away_goals:2,score:'4x2',status:'Finalizado',winner:'ESP',advancer:'ESP'}],
+  resultados_meta:{artilheiro_oficial:'Lionel Messi'},
+  participantes:[
+    {entry_id:20,name:'Acertou final e artilheiro',bet_number:1,display_name:'Acertou final e artilheiro #1',valid:true,finals:{campeao:'Espanha',vice:'Argentina',artilheiro:'Lionel Messi'}},
+    {entry_id:21,name:'Errou final e artilheiro',bet_number:1,display_name:'Errou final e artilheiro #1',valid:true,finals:{campeao:'Argentina',vice:'Espanha',artilheiro:'Kylian Mbappé'}}
+  ],
+  apostas_detalhes:{
+    '20':{entry_id:20,display_name:'Acertou final e artilheiro #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[]},
+    '21':{entry_id:21,display_name:'Errou final e artilheiro #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[]}
+  },
+  times: data.times,
+  regras: data.regras
+};
+const completeFinalRanking=calculate(structuredClone(miniFinalComplete)).ranking;
+const finalHit=completeFinalRanking.find(r=>r.entry_id===20);
+const finalMiss=completeFinalRanking.find(r=>r.entry_id===21);
+assert.equal(finalHit.bonus_final_detalhe.campeao,70,'campeão correto deve ser creditado quando #104 terminar');
+assert.equal(finalHit.bonus_final_detalhe.vice,50,'vice correto deve ser creditado quando #104 terminar');
+assert.equal(finalHit.bonus_final_detalhe.artilheiro,40,'artilheiro oficial vindo dos metadados deve ser creditado');
+assert.equal(finalHit.bonus,160,'campeão + vice + artilheiro devem somar 160 pontos');
+assert.equal(finalMiss.bonus,0,'quem inverteu campeão/vice e errou artilheiro não deve receber esses bônus');
+
+// V23: a disputa de 3º lugar libera os bônus finais de 3º e 4º colocados assim que terminar,
+// mesmo antes da final. Inglaterra vence a França: Inglaterra = 3º, França = 4º.
+const miniThird={
+  resultados:[
+    {game_id:101,phase:'Semifinais',home:'FRA',away:'ESP',home_goals:0,away_goals:2,score:'0x2',status:'Finalizado',winner:'ESP',advancer:'ESP'},
+    {game_id:102,phase:'Semifinais',home:'ENG',away:'ARG',home_goals:1,away_goals:2,score:'1x2',status:'Finalizado',winner:'ARG',advancer:'ARG'},
+    {game_id:103,phase:'3º Lugar',home:'FRA',away:'ENG',home_goals:3,away_goals:6,score:'3x6',status:'Finalizado',winner:'ENG',advancer:'ENG'},
+    {game_id:104,phase:'Final',home:null,away:null,home_goals:null,away_goals:null,score:null,status:'Pendente',winner:null,advancer:null}
+  ],
+  participantes:[
+    {entry_id:3,name:'Acertou terceiro',bet_number:1,display_name:'Acertou terceiro #1',valid:true,finals:{terceiro:'Inglaterra',quarto:'França'}},
+    {entry_id:4,name:'Errou terceiro',bet_number:1,display_name:'Errou terceiro #1',valid:true,finals:{terceiro:'França',quarto:'Inglaterra'}}
+  ],
+  apostas_detalhes:{
+    '3':{entry_id:3,display_name:'Acertou terceiro #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[]},
+    '4':{entry_id:4,display_name:'Errou terceiro #1',group_predictions:[],predicted_qualified:[],classified_hits:[],knockout_predictions:[]}
+  },
+  times: data.times,
+  regras: data.regras
+};
+const thirdRank=calculate(structuredClone(miniThird)).ranking;
+const hitThird=thirdRank.find(r=>r.entry_id===3);
+const missThird=thirdRank.find(r=>r.entry_id===4);
+assert.equal(hitThird.bonus,40,'quem acertou Inglaterra em 3º e França em 4º deve receber 30+10 pontos');
+assert.deepEqual(hitThird.bonus_final_detalhe, {campeao:0,vice:0,terceiro:30,quarto:10,artilheiro:0,total:40}, 'detalhe do bônus de 3º/4º deve ficar explícito');
+assert.equal(missThird.bonus,0,'quem inverteu França/Inglaterra não deve receber bônus de 3º/4º');
 
 // Regressão do ranking publicado: pontos e posições não podem mudar sem regra explícita.
 const expected=read('ranking');

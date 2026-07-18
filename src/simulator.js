@@ -1,4 +1,4 @@
-import { calculate, prepareResults, isPlayed } from './engine.js';
+import { calculate, prepareResults, isPlayed, finalPodiumFromResults, finalBonusForFinals } from './engine.js';
 
 const FINAL_BONUS = { campeao:70, vice:50, terceiro:30, quarto:10, artilheiro:40 };
 const BRACKET_ORDER = [97,98,99,100,101,102,103,104];
@@ -66,47 +66,31 @@ export function buildSimulatedResults(baseResults, times=[], choices={}){
 }
 
 export function getFinalPodium(results){
-  const map = byId(results || []);
-  const final = map[104];
-  const third = map[103];
-  return {
-    campeao: isPlayed(final) ? final.advancer : null,
-    vice: isPlayed(final) ? loserOfGame(final) : null,
-    terceiro: isPlayed(third) ? third.advancer : null,
-    quarto: isPlayed(third) ? loserOfGame(third) : null
-  };
+  return finalPodiumFromResults(results || []);
 }
 
 export function finalBonusForRankingRow(row, podium, artilheiro, times=[]){
-  const finals = row?.finals || {};
-  const nameByCode = code => teamName(code, times);
-  const compare = (predName, code) => !!predName && !!code && normalizeText(predName) === normalizeText(nameByCode(code));
-  const items = {
-    campeao: compare(finals.campeao, podium.campeao) ? FINAL_BONUS.campeao : 0,
-    vice: compare(finals.vice, podium.vice) ? FINAL_BONUS.vice : 0,
-    terceiro: compare(finals.terceiro, podium.terceiro) ? FINAL_BONUS.terceiro : 0,
-    quarto: compare(finals.quarto, podium.quarto) ? FINAL_BONUS.quarto : 0,
-    artilheiro: artilheiro && normalizeText(finals.artilheiro) === normalizeText(artilheiro) ? FINAL_BONUS.artilheiro : 0
-  };
-  return { ...items, total: Object.values(items).reduce((s,n)=>s+n,0) };
+  return finalBonusForFinals(row?.finals || {}, podium || {}, artilheiro || null, times || [], { bonus_finais: FINAL_BONUS });
 }
 
 export function computeSimulation(data, officialRanking, choices={}, artilheiro=null){
   const officialSnapshot = clone(officialRanking || []);
   const officialById = Object.fromEntries(officialSnapshot.map(r => [r.entry_id, r]));
   const simulatedResults = buildSimulatedResults(data.resultados || [], data.times || [], choices || {});
-  const calc = calculate({ ...clone(data), resultados: simulatedResults });
+  // O motor oficial agora também calcula os bônus finais já conhecidos. Para o simulador,
+  // passamos o artilheiro escolhido como dado de cenário e NÃO somamos bônus novamente.
+  const calc = calculate({ ...clone(data), resultados: simulatedResults, artilheiro_oficial: artilheiro || null });
   const podium = getFinalPodium(simulatedResults);
   const ranking = calc.ranking.map(row => {
     const official = officialById[row.entry_id] || {};
-    const bonusFinal = finalBonusForRankingRow(row, podium, artilheiro, data.times || []);
-    const total_simulado = Number(row.total || 0) + bonusFinal.total;
+    const bonusFinal = row.bonus_final_detalhe || finalBonusForRankingRow(row, podium, artilheiro, data.times || []);
+    const total_simulado = Number(row.total || 0);
     return {
       ...row,
       total_oficial: Number(official.total ?? row.total ?? 0),
       posicao_oficial: official.posicao || row.posicao,
-      total_sem_bonus_final: row.total,
-      bonus_final_simulado: bonusFinal.total,
+      total_sem_bonus_final: Number(row.total || 0) - Number(row.bonus || 0),
+      bonus_final_simulado: Number(row.bonus || bonusFinal.total || 0),
       bonus_final_detalhe: bonusFinal,
       total_simulado,
       diferenca_pontos: total_simulado - Number(official.total ?? row.total ?? 0)
